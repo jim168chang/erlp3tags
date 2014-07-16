@@ -1,0 +1,7 @@
+ebin
+.idea
+.swo
+.swp
+logs
+misc
+erl_crash.dump

@@ -1,0 +1,12 @@
+{application, erlp3tags,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { erlp3tags_app, []}},
+  {env, []}
+ ]}.
