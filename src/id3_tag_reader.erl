@@ -48,7 +48,7 @@ parse_v2_tag(FileHandle) ->
   {ok, FirstTen} = file:read(FileHandle, 10),
   {ok, Header} = read_v2_header(FirstTen),
   Version = proplists:get_value(version, Header),
-  io:format("~p~n", [read_v2(Version, FileHandle, Header)]),
+  read_v2(Version, FileHandle, Header),
   ok.
 
 read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer, C:1/integer, D:1/integer,

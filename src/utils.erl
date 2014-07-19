@@ -39,7 +39,7 @@ trim(Bin) ->
 trim_blanks(X) ->
   lists:reverse(skip_blanks_and_zeros(lists:reverse(X))).
 
-skip_blanks_and_zeros([$\s | T]) ->
+skip_blanks_and_zeros([32 | T]) ->
   skip_blanks_and_zeros(T);
 
 skip_blanks_and_zeros([0 | T]) ->
@@ -47,6 +47,9 @@ skip_blanks_and_zeros([0 | T]) ->
 
 skip_blanks_and_zeros(X) ->
   X.
+
+decode_string(BinString) ->
+  unicode:characters_to_list(trim(BinString), latin1).
 
 decode_string(1, BinString) ->
   unicode:characters_to_list(trim(BinString), unicode);
