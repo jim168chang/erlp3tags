@@ -29,10 +29,10 @@ test_read_header(FileHandle) ->
 
 test_synch_safe() ->
   Expected = {ok, 85754},
-  Actual = id3_tag_reader:synch_safe(<<0, 5, 29, 122>>),
+  Actual = utils:synch_safe(<<0, 5, 29, 122>>),
   Expected = Actual,
   Expected2 = {error, invalid_size_bytes},
-  Actual2 = id3_tag_reader:synch_safe(<<5, 29, 122>>),
+  Actual2 = utils:synch_safe(<<5, 29, 122>>),
   Expected2 = Actual2,
   erlog:info("Testing id3_tag_reader:synch_safe/1 - passed~n").
 
@@ -42,6 +42,7 @@ tests() ->
   erlog:info("~n~n---------------Starting Tests---------------~n~n"),
   File = filename:join("misc", "mi_one_six.mp3"),
   {ok, S} = file:open(File, [read, binary, raw]),
+  id3_tag_reader:read_tag(File),
   test_read_header(S),
   test_synch_safe(),
   erlog:info("~n~n---------------Tests Finished---------------~n~n"),

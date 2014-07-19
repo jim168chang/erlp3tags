@@ -12,4 +12,3 @@
 
 -record(id3v1, {tag, title, artist, album, year, comment, genre}).
 -record(id3v1_1, {tag, title, artist, album, year, comment, track, genre}).
-
