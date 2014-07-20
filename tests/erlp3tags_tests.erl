@@ -62,18 +62,43 @@ test_parse_v22_frame_bin() ->
   ]},
   ActualCRA = ExpectedCRA,
 
+  ActualCRM = v22_reader:parse_frame_bin(<<"CRM">>, 10, <<"http://mailto:segun@ratendate.com", 0, "no reason", 0, 1,2,3,4,5,6,7,8,9,10>>),
+  ExpectedCRM = {crm, [
+    {owner_id, "http://mailto:segun@ratendate.com"},
+    {content_explanation, "no reason"},
+    {encrypted_data, <<1,2,3,4,5,6,7,8,9,10>>}
+  ]},
+  ActualCRM = ExpectedCRM,
+
+  ActualETC = v22_reader:parse_frame_bin(<<"ETC">>, 10, <<2, 16#A, 0, 0, 0, 33>>),
+  ExpectedETC = {etc, [
+    {time_stamp_format, milliseconds},
+    {event, etc_variation},
+    {timestamp, 33}
+  ]},
+  ActualETC = ExpectedETC,
+
+  ActualEQU = v22_reader:parse_frame_bin(<<"EQU">>, 10, <<16, 255,  128,  0, 4>>),
+  ExpectedEQU = {equ, [
+    {adjustment_bits, 16},
+    {inc_or_dec, increment},
+    {frequency, 32640},
+    {adjustment, 4}
+  ]},
+  ActualEQU = ExpectedEQU,
+
   erlog:info("Testing v22_reader:parse_frame_bin/3 - passed~n").
 
 
 tests() ->
   erlog:start(),
   erlog:load_config_file("conf/erlog.conf"),
-  erlog:info("~n~n---------------Starting Tests---------------~n~n"),
+  erlog:info("~n---------------Starting Tests---------------~n"),
   File = filename:join("misc", "mi_one_six.mp3"),
   {ok, S} = file:open(File, [read, binary, raw]),
   id3_tag_reader:read_tag(File),
   test_read_header(S),
   test_synch_safe(),
   test_parse_v22_frame_bin(),
-  erlog:info("~n~n---------------Tests Finished---------------~n~n"),
+  erlog:info("~n---------------Tests Finished---------------~n"),
   ok.

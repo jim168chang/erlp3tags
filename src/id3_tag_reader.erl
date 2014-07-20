@@ -17,26 +17,26 @@
 read_tag(File) ->
   case file:open(File, [read, binary, raw]) of
     {ok, S} ->
-      erlog:info("Checking for V2"),
+      erlog:info("Checking for V2~n"),
       {ok, IDv2Tag} = file:pread(S, 0, 3),
       case IDv2Tag of
         <<"ID3">> ->
-          erlog:info("Found ID3v2"),
+          erlog:info("Found ID3v2~n"),
           parse_v2_tag(S);
         _ ->
-          erlog:info("ID3v2 Not Found ~p", [IDv2Tag])
+          erlog:info("ID3v2 Not Found ~p~n", [IDv2Tag])
       end,
 
-      erlog:info("Checking for V1"),
+      erlog:info("Checking for V1~n"),
       file:position(S, {eof, -128}),
 
       {ok, ID3V1Tag} = file:read(S, 3),
       case ID3V1Tag of
         <<"TAG">> ->
-          erlog:info("Found ID3v1"),
+          erlog:info("Found ID3v1~n"),
         parse_v1_tag(S);
         _ ->
-          erlog:info("ID3v1 Not Found")
+          erlog:info("ID3v1 Not Found~n")
       end,
       %%Result = parse_v1_tag(ID3Tags),
       file:close(S);
