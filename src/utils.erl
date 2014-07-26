@@ -106,16 +106,16 @@ etc_event_atom_to_code(Atom) ->
     etc_audio_file_end -> ?ETC_AUDIO_FILE_END
   end.
 
-etc_time_format_code_to_atom(Code) ->
+time_format_code_to_atom(Code) ->
   case Code of
     1 -> mpeg_frames;
     2 -> milliseconds
   end.
 
-etc_time_format_atom_to_code(Atom) ->
+time_format_atom_to_code(Atom) ->
   case Atom of
-    mpeg_frames -> ?ETC_MPEG_FRAMES;
-    milliseconds -> ?ETC_MILLISECONDS
+    mpeg_frames -> ?MPEG_FRAMES_TIME_FORMAT;
+    milliseconds -> ?MILLISECONDS_TIME_FORMAT
   end.
 
 equ_inc_dec_code_to_atom(Code) ->
@@ -128,4 +128,24 @@ equ_inc_dec_atom_to_code(Atom) ->
   case Atom of
     increment -> 1;
     decrement -> 0
+  end.
+
+slt_content_type_code_to_atom(Code) ->
+  case Code of
+    0 -> other;
+    1 -> lyrics;
+    2 -> text_transcription;
+    3 -> movement;
+    4 -> events;
+    5 -> chord
+  end.
+
+slt_content_type_atom_to_code(Atom) ->
+  case Atom of
+    other -> ?SLT_CON_TYPE_OTHER;
+    lyrics -> ?SLT_CON_TYPE_LYRICS;
+    text_transcription -> ?SLT_CON_TYPE_TEXT_TRANSCRIPTION;
+    movement -> ?SLT_CON_TYPE_MOVEMENT;
+    events -> ?SLT_CON_TYPE_EVENTS;
+    chord -> ?SLT_CON_TYPE_CHORD
   end.

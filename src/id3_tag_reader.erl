@@ -69,12 +69,24 @@ read_v2_header(_) ->
   {error, invalid_v2_header_bytes}.
 
 read_v2({2, 2, 0}, FileHandle, Header) ->
-  v22_reader:read_v22(FileHandle, Header).
+  v22_reader:read_v22(FileHandle, Header);
+
+read_v2({2, 3, 0}, _FileHandle, _Header) ->
+  %io:format("Header: ~p~n", [Header]),
+  %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
+  ok;
+
+read_v2({2, 4, 0}, _FileHandle, _Header) ->
+  %io:format("Header: ~p~n", [Header]),
+  %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
+  ok.
+
+parse_v1_tag(_FileHandle) ->
+  ok.
+
+%%parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1, Track:1, Genre:1>> = _Result) ->
+%%  {ok, "ID3v1.1", #id3v1_1{tag = "ID3v1.1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, track = Track, genre = Genre}};
 
 
-parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1, Track:1, Genre:1>> = _Result) ->
-  {ok, "ID3v1.1", #id3v1_1{tag = "ID3v1.1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, track = Track, genre = Genre}};
-
-
-parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8>>) ->
-  {ok, "ID3v1", #id3v1{tag = "ID3v1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, genre = Genre}}.
+%%parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8>>) ->
+%%  {ok, "ID3v1", #id3v1{tag = "ID3v1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, genre = Genre}}.
