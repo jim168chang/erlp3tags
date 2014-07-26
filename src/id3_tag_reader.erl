@@ -69,14 +69,17 @@ read_v2_header(_) ->
   {error, invalid_v2_header_bytes}.
 
 read_v2({2, 2, 0}, FileHandle, Header) ->
+  erlog:info("Found Version 2.2.0~n"),
   v22_reader:read_v22(FileHandle, Header);
 
 read_v2({2, 3, 0}, _FileHandle, _Header) ->
+  erlog:info("Found Version 2.3.0~n"),
   %io:format("Header: ~p~n", [Header]),
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
   ok;
 
 read_v2({2, 4, 0}, _FileHandle, _Header) ->
+  erlog:info("Found Version 2.4.0~n"),
   %io:format("Header: ~p~n", [Header]),
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
   ok.

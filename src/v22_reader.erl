@@ -15,7 +15,9 @@
 
 read_v22(FileHandle, Header) ->
   {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
-  read_v22_frame(ID3Data, []).
+  Result = read_v22_frame(ID3Data, []),
+  io:format("~p~n", [Result]),
+  Result.
 
 read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) ->
   {FrameContent, ID3Data} = split_binary(Rest, Size),
@@ -118,6 +120,18 @@ parse_frame_bin(<<"STC">>, _Size, <<TimeStampFormat:8/integer, TempoData/binary>
   {stc, [
     {timestamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
     {tempo_data, TempoData}
+  ]};
+
+parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary>> = Header, _Size, <<Enc:8/integer, Rest/binary>>) ->
+  TextData = case utils:get_null_terminated_string_from_frame(Rest) of
+    {Data, _Rem} ->
+      Data;
+    _ ->
+      Rest
+  end,
+  {utils:text_header_to_atom(utils:decode_string(Header)), [
+    {encoding, Enc},
+    {textstring, TextData}
   ]};
 
 parse_frame_bin(_Header, _Size, _FrameContent) ->

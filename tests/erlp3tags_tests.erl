@@ -36,7 +36,13 @@ test_synch_safe() ->
   Expected2 = Actual2,
   erlog:info("Testing id3_tag_reader:synch_safe/1 - passed~n").
 
-test_parse_v22_frame_bin() ->
+test_text_header_to_atom() ->
+  Expected = tal,
+  Actual = utils:text_header_to_atom("TAL"),
+  Expected = Actual,
+  erlog:info("Testing utils:text_header_to_atom/1 - passed~n").
+
+  test_parse_v22_frame_bin() ->
   ActualBUF = v22_reader:parse_frame_bin(<<"BUF">>, 8, <<12, 13, 14, 1, 1, 2, 3, 4>>),
   ExpectedBUF = {buf, [{buffer_size, 789774}, {embedded_info, true}, {next_flag_offset, 16909060}]},
   ActualBUF = ExpectedBUF,
@@ -175,7 +181,6 @@ test_parse_v22_frame_bin() ->
 
   erlog:info("Testing v22_reader:parse_frame_bin/3 - passed~n").
 
-
 tests() ->
   erlog:start(),
   erlog:load_config_file("conf/erlog.conf"),
@@ -186,5 +191,8 @@ tests() ->
   test_read_header(S),
   test_synch_safe(),
   test_parse_v22_frame_bin(),
+  test_text_header_to_atom(),
   erlog:info("~n---------------Tests Finished---------------~n"),
+
+  id3_tag_reader:read_tag(filename:join("misc", "mi_one_six_real.mp3")),
   ok.
