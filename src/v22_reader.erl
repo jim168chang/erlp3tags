@@ -18,7 +18,7 @@ read_v22(FileHandle, Header) ->
   Result = read_v22_frame(ID3Data, []),
   Result.
 
-read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) ->
+read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) when FrameID =/= <<0, 0, 0>> ->
   {FrameContent, ID3Data} = split_binary(Rest, Size),
   Frame = parse_frame_bin(FrameID, Size, FrameContent),
   read_v22_frame(ID3Data, [Frame | Frames]);
@@ -26,46 +26,47 @@ read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) ->
 read_v22_frame(_, Frames) ->
   lists:reverse([Frame || Frame <- Frames, Frame =/= not_yet_implemented]).
 
-parse_frame_bin(<<"BUF">>, _Size, <<BufferSize:24/integer, 1:8/integer, NextFlagOffset:32/integer>>) ->
-  {buf, [{buffer_size, BufferSize}, {embedded_info, true}, {next_flag_offset, NextFlagOffset}]};
+parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, 1:8/integer, NextFlagOffset:32/integer>>) ->
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, true}, {next_flag_offset, NextFlagOffset}]};
 
-parse_frame_bin(<<"BUF">>, _Size, <<BufferSize:24/integer, 0:8/integer>>) ->
-  {buf, [{buffer_size, BufferSize}, {embedded_info, false}]};
+parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, 0:8/integer>>) ->
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, false}]};
 
 parse_frame_bin(<<"CNT">>, Size, FrameContent) ->
   Bits = Size * 8,
   <<PlayCount:Bits/integer>> = FrameContent,
-  {cnt, PlayCount};
+  {cnt, [{size, Size}, {playcount, PlayCount}]};
 
-parse_frame_bin(<<"COM">>, _Size, FrameContent) ->
-  {com, parse_com_content(FrameContent)};
+parse_frame_bin(<<"COM">>, Size, FrameContent) ->
+  {com, [{size, Size} | parse_com_content(FrameContent)]};
 
-parse_frame_bin(<<"CRA">>, _Size, FrameContent) ->
-  {cra, parse_cra_content(FrameContent)};
+parse_frame_bin(<<"CRA">>, Size, FrameContent) ->
+  {cra, [{size, Size} | parse_cra_content(FrameContent)]};
 
-parse_frame_bin(<<"CRM">>, _Size, FrameContent) ->
-  {crm, parse_crm_content(FrameContent)};
+parse_frame_bin(<<"CRM">>, Size, FrameContent) ->
+  {crm, [{size, Size} | parse_crm_content(FrameContent)]};
 
-parse_frame_bin(<<"ETC">>, _Size, FrameContent) ->
-  {etc, parse_etc_content(FrameContent)};
+parse_frame_bin(<<"ETC">>, Size, FrameContent) ->
+  {etc, [{size, Size} | parse_etc_content(FrameContent)]};
 
-parse_frame_bin(<<"EQU">>, _Size, FrameContent) ->
-  {equ, parse_equ_content(FrameContent)};
+parse_frame_bin(<<"EQU">>, Size, FrameContent) ->
+  {equ, [{size, Size} | parse_equ_content(FrameContent)]};
 
-parse_frame_bin(<<"GEO">>, _Size, FrameContent) ->
-  {geo, parse_geo_content(FrameContent)};
+parse_frame_bin(<<"GEO">>, Size, FrameContent) ->
+  {geo, [{size, Size} | parse_geo_content(FrameContent)]};
 
-parse_frame_bin(<<"IPL">>, _Size, FrameContent) ->
-  {ipl, parse_ipl_content(FrameContent)};
+parse_frame_bin(<<"IPL">>, Size, FrameContent) ->
+  {ipl, [{size, Size} | parse_ipl_content(FrameContent)]};
 
-parse_frame_bin(<<"LNK">>, _Size, FrameContent) ->
-  {lnk, parse_lnk_content(FrameContent)};
+parse_frame_bin(<<"LNK">>, Size, FrameContent) ->
+  {lnk, [{size, Size} | parse_lnk_content(FrameContent)]};
 
-parse_frame_bin(<<"MCI">>, _Size, <<TOC/binary>>) ->
-  {mci, [{table_of_contents, TOC}]};
+parse_frame_bin(<<"MCI">>, Size, <<TOC/binary>>) ->
+  {mci, [{size, Size}, {table_of_contents, TOC}]};
 
-parse_frame_bin(<<"MLL">>, _Size, <<FBR:16/integer, BBR:24/integer, MBR:24/integer, BBD:8/integer, BMD:8/integer>>) ->
+parse_frame_bin(<<"MLL">>, Size, <<FBR:16/integer, BBR:24/integer, MBR:24/integer, BBD:8/integer, BMD:8/integer>>) ->
   {mll, [
+    {size, Size},
     {frames_between_reference, FBR},
     {bytes_between_reference, BBR},
     {milliseconds_between_reference, MBR},
@@ -73,16 +74,17 @@ parse_frame_bin(<<"MLL">>, _Size, <<FBR:16/integer, BBR:24/integer, MBR:24/integ
     {bits_for_milliseconds_deviation, BMD}
   ]};
 
-parse_frame_bin(<<"POP">>, _Size, FrameContent) ->
-  {pop, parse_pop_content(FrameContent)};
+parse_frame_bin(<<"POP">>, Size, FrameContent) ->
+  {pop, [{size, Size} | parse_pop_content(FrameContent)]};
 
-parse_frame_bin(<<"PIC">>, _Size, FrameContent) ->
-  {pic, parse_pic_content(FrameContent)};
+parse_frame_bin(<<"PIC">>, Size, FrameContent) ->
+  {pic, [{size, Size} | parse_pic_content(FrameContent)]};
 
-parse_frame_bin(<<"REV">>, _Size, <<RL:16/integer, RR:16/integer,
+parse_frame_bin(<<"REV">>, Size, <<RL:16/integer, RR:16/integer,
 RBL:8/integer, RBR:8/integer, RFLTL:8/integer, RFLTR:8/integer,
 RFRTR:8/integer, RFRTL:8/integer, PLTR:8/integer, PRTL:8/integer>>) ->
   {rev, [
+    {size, Size},
     {reveb_left, RL},
     {reverb_right, RR},
     {reverb_bounces_left, RBL},
@@ -95,8 +97,9 @@ RFRTR:8/integer, RFRTL:8/integer, PLTR:8/integer, PRTL:8/integer>>) ->
     {premix_right_to_left, PRTL}
   ]};
 
-parse_frame_bin(<<"RVA">>, _Size, <<IncR:4/integer, IncL:4/integer, Len:8/integer, RVCR:Len/integer, RVCL:Len/integer, PVR:Len/integer, PVL:Len/integer>>) ->
+parse_frame_bin(<<"RVA">>, Size, <<IncR:4/integer, IncL:4/integer, Len:8/integer, RVCR:Len/integer, RVCL:Len/integer, PVR:Len/integer, PVL:Len/integer>>) ->
   {rva, [
+    {size, Size},
     {inc_or_dec_right, IncR},
     {inc_or_dec_left, IncL},
     {bits_used_for_volume, Len},
@@ -106,8 +109,9 @@ parse_frame_bin(<<"RVA">>, _Size, <<IncR:4/integer, IncL:4/integer, Len:8/intege
     {peak_volume_left, PVL}
   ]};
 
-parse_frame_bin(<<"SLT">>, _Size, <<Enc:8/integer, Language:3/binary, TimeStampFormat:8/integer, ContentType:8/integer, Rest/binary>>) ->
+parse_frame_bin(<<"SLT">>, Size, <<Enc:8/integer, Language:3/binary, TimeStampFormat:8/integer, ContentType:8/integer, Rest/binary>>) ->
   {slt, [
+    {size, Size},
     {encoding, Enc},
     {language, utils:decode_string(Language)},
     {timestamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
@@ -115,36 +119,40 @@ parse_frame_bin(<<"SLT">>, _Size, <<Enc:8/integer, Language:3/binary, TimeStampF
     {content_descriptor, utils:decode_string(Enc, Rest)}
   ]};
 
-parse_frame_bin(<<"STC">>, _Size, <<TimeStampFormat:8/integer, TempoData/binary>>) ->
+parse_frame_bin(<<"STC">>, Size, <<TimeStampFormat:8/integer, TempoData/binary>>) ->
   {stc, [
+    {size, Size},
     {timestamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
     {tempo_data, TempoData}
   ]};
 
-parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary>> = Header, _Size, <<Enc:8/integer, Rest/binary>>) ->
+parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary>> = Header, Size, <<Enc:8/integer, Rest/binary>>) ->
   TextData = case utils:get_null_terminated_string_from_frame(Rest) of
-    {Data, _Rem} ->
-      Data;
-    _ ->
-      Rest
-  end,
+               {Data, _Rem} ->
+                 Data;
+               _ ->
+                 Rest
+             end,
   {utils:header_to_atom(utils:decode_string(Header)), [
+    {size, Size},
     {encoding, Enc},
     {textstring, utils:decode_string(Enc, TextData)}
   ]};
 
-parse_frame_bin(<<$W, _W2:1/binary, _W3:1/binary>> = Header, _Size, <<URL/binary>>) ->
+parse_frame_bin(<<$W, _W2:1/binary, _W3:1/binary>> = Header, Size, <<URL/binary>>) ->
   {utils:header_to_atom(utils:decode_string(Header)), [
+    {size, Size},
     {url, utils:decode_string(URL)}
   ]};
 
-parse_frame_bin(<<"UFI">>, _Size, FrameContent) ->
-  {ufi, parse_ufi_content(FrameContent)};
+parse_frame_bin(<<"UFI">>, Size, FrameContent) ->
+  {ufi, [{size, Size} | parse_ufi_content(FrameContent)]};
 
-parse_frame_bin(<<"ULT">>, _Size, <<Enc:8/integer, Lang:3/binary, Rest/binary>>) ->
+parse_frame_bin(<<"ULT">>, Size, <<Enc:8/integer, Lang:3/binary, Rest/binary>>) ->
   case utils:get_null_terminated_string_from_frame(Rest) of
     {ContentDesc, Lyrics} ->
       {ult, [
+        {size, Size},
         {encoding, Enc},
         {language, utils:decode_string(Enc, Lang)},
         {content_descriptor, utils:decode_string(Enc, ContentDesc)},
