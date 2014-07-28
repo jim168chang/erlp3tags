@@ -150,6 +150,6 @@ slt_content_type_atom_to_code(Atom) ->
     chord -> ?SLT_CON_TYPE_CHORD
   end.
 
-text_header_to_atom(Header) ->
+header_to_atom(Header) ->
   LowerCase = string:to_lower(Header),
   list_to_atom(LowerCase).

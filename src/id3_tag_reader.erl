@@ -19,27 +19,29 @@ read_tag(File) ->
     {ok, S} ->
       erlog:info("Checking for V2~n"),
       {ok, IDv2Tag} = file:pread(S, 0, 3),
-      case IDv2Tag of
+      IDv2TagResult = case IDv2Tag of
         <<"ID3">> ->
           erlog:info("Found ID3v2~n"),
           parse_v2_tag(S);
         _ ->
-          erlog:info("ID3v2 Not Found ~p~n", [IDv2Tag])
+          erlog:info("ID3v2 Not Found ~p~n", [IDv2Tag]),
+          not_found
       end,
 
       erlog:info("Checking for V1~n"),
       file:position(S, {eof, -128}),
 
       {ok, ID3V1Tag} = file:read(S, 3),
-      case ID3V1Tag of
+      IDv1TagResult = case ID3V1Tag of
         <<"TAG">> ->
           erlog:info("Found ID3v1~n"),
         parse_v1_tag(S);
         _ ->
-          erlog:info("ID3v1 Not Found~n")
+          erlog:info("ID3v1 Not Found~n"),
+          not_found
       end,
-      %%Result = parse_v1_tag(ID3Tags),
-      file:close(S);
+      file:close(S),
+      {ok, [{idv1tag, IDv1TagResult}, {idv2tag, IDv2TagResult}]};
     _Error ->
       error
   end.
@@ -48,8 +50,7 @@ parse_v2_tag(FileHandle) ->
   {ok, FirstTen} = file:read(FileHandle, 10),
   {ok, Header} = read_v2_header(FirstTen),
   Version = proplists:get_value(version, Header),
-  read_v2(Version, FileHandle, Header),
-  ok.
+  read_v2(Version, FileHandle, Header).
 
 read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer, C:1/integer, D:1/integer,
               _UnusedFlags:4, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)

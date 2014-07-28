@@ -16,7 +16,6 @@
 read_v22(FileHandle, Header) ->
   {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
   Result = read_v22_frame(ID3Data, []),
-  io:format("~p~n", [Result]),
   Result.
 
 read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) ->
@@ -129,13 +128,43 @@ parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary>> = Header, _Size, <<Enc:8/inte
     _ ->
       Rest
   end,
-  {utils:text_header_to_atom(utils:decode_string(Header)), [
+  {utils:header_to_atom(utils:decode_string(Header)), [
     {encoding, Enc},
-    {textstring, TextData}
+    {textstring, utils:decode_string(Enc, TextData)}
   ]};
+
+parse_frame_bin(<<$W, _W2:1/binary, _W3:1/binary>> = Header, _Size, <<URL/binary>>) ->
+  {utils:header_to_atom(utils:decode_string(Header)), [
+    {url, utils:decode_string(URL)}
+  ]};
+
+parse_frame_bin(<<"UFI">>, _Size, FrameContent) ->
+  {ufi, parse_ufi_content(FrameContent)};
+
+parse_frame_bin(<<"ULT">>, _Size, <<Enc:8/integer, Lang:3/binary, Rest/binary>>) ->
+  case utils:get_null_terminated_string_from_frame(Rest) of
+    {ContentDesc, Lyrics} ->
+      {ult, [
+        {encoding, Enc},
+        {language, utils:decode_string(Enc, Lang)},
+        {content_descriptor, utils:decode_string(Enc, ContentDesc)},
+        {lyrics_text, utils:decode_string(Enc, Lyrics)}
+      ]};
+    _ ->
+      invalid_bytes_detected
+  end;
 
 parse_frame_bin(_Header, _Size, _FrameContent) ->
   not_yet_implemented.
+
+parse_ufi_content(FrameContent) ->
+  case utils:get_null_terminated_string_from_frame(FrameContent) of
+    {OwnerID, Identitifer} ->
+      [
+        {owner_identifier, utils:decode_string(OwnerID)},
+        {identifier, Identitifer}
+      ]
+  end.
 
 parse_pop_content(FrameContent) ->
   case utils:get_null_terminated_string_from_frame(FrameContent) of

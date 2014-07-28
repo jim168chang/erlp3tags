@@ -38,11 +38,11 @@ test_synch_safe() ->
 
 test_text_header_to_atom() ->
   Expected = tal,
-  Actual = utils:text_header_to_atom("TAL"),
+  Actual = utils:header_to_atom("TAL"),
   Expected = Actual,
   erlog:info("Testing utils:text_header_to_atom/1 - passed~n").
 
-  test_parse_v22_frame_bin() ->
+test_parse_v22_frame_bin() ->
   ActualBUF = v22_reader:parse_frame_bin(<<"BUF">>, 8, <<12, 13, 14, 1, 1, 2, 3, 4>>),
   ExpectedBUF = {buf, [{buffer_size, 789774}, {embedded_info, true}, {next_flag_offset, 16909060}]},
   ActualBUF = ExpectedBUF,
@@ -168,17 +168,46 @@ test_text_header_to_atom() ->
   ActualRVA = ExpectedRVA,
 
   ActualSLT = v22_reader:parse_frame_bin(<<"SLT">>, 10, <<1, "ENG", 2, 1,
-        "Strang", 0, 1, 0,  "ers",  0, 1, 1,  " in", 0, 2, 0,  " the", 0, 2, 1, " night", 0, 2, 2, 0>>),
+  "Strang", 0, 1, 0, "ers", 0, 1, 1, " in", 0, 2, 0, " the", 0, 2, 1, " night", 0, 2, 2, 0>>),
   ExpectedSLT = {slt, [
     {encoding, 1},
     {language, "ENG"},
     {timestamp_format, utils:time_format_code_to_atom(2)},
     {content_type, utils:slt_content_type_code_to_atom(1)},
-    {content_descriptor, [83,116,114,97,110,103,0,1,0,101,114,115,0, 1,1,32,105,110,0,2,0,32,116,104,101,0,2,1, 32,110,105,103,104,116,0,2,2]}
+    {content_descriptor, [83, 116, 114, 97, 110, 103, 0, 1, 0, 101, 114, 115, 0, 1, 1, 32, 105, 110, 0, 2, 0, 32, 116, 104, 101, 0, 2, 1, 32, 110, 105, 103, 104, 116, 0, 2, 2]}
   ]},
 
   ActualSLT = ExpectedSLT,
 
+  ActualTEN = v22_reader:parse_frame_bin(<<"TEN">>, 10, <<0, "Naija", 0>>),
+  ExpectedTen = {ten, [
+    {encoding,0},
+    {textstring,"Naija"}
+  ]},
+  ActualTEN = ExpectedTen,
+
+  ActualUFI = v22_reader:parse_frame_bin(<<"UFI">>, 10, <<"The Don", 0, 1,2,3,4,5,6,7,8,9>>),
+  ExpectedUFI = {ufi, [
+    {owner_identifier, "The Don"},
+    {identifier, <<1,2,3,4,5,6,7,8,9>>}
+  ]},
+  ActualUFI = ExpectedUFI,
+
+  ActualULT = v22_reader:parse_frame_bin(<<"ULT">>, 10, <<0, "SPA", "This Is A Content Descriptor", 0, "This Is A Lyrics">>),
+  %%io:format("RESULT: ~p~n", [ActualULT]),
+  ExpectedULT = {ult, [
+    {encoding, 0},
+    {language, "SPA"},
+    {content_descriptor, "This Is A Content Descriptor"},
+    {lyrics_text, "This Is A Lyrics"}
+  ]},
+  ActualULT = ExpectedULT,
+
+  ActualWAF = v22_reader:parse_frame_bin(<<"WAF">>, 10, <<"http://nalyrics.com.ng">>),
+  ExpectedWAF = {waf, [
+    {url, "http://nalyrics.com.ng"}
+  ]},
+  ActualWAF = ExpectedWAF,
   erlog:info("Testing v22_reader:parse_frame_bin/3 - passed~n").
 
 tests() ->
@@ -194,5 +223,5 @@ tests() ->
   test_text_header_to_atom(),
   erlog:info("~n---------------Tests Finished---------------~n"),
 
-  id3_tag_reader:read_tag(filename:join("misc", "mi_one_six_real.mp3")),
+  io:format("Result: ~p~n", [id3_tag_reader:read_tag(filename:join("misc", "mi_one_six_real.mp3"))]),
   ok.
