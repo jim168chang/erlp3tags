@@ -11,6 +11,18 @@
 
 %% API
 -export([read_v22/2, parse_frame_bin/3]).
+
+-export([
+  parse_cra_content/1,
+  parse_com_content/1,
+  parse_equ_content/1,
+  parse_etc_content/1,
+  parse_geo_content/1,
+  parse_ipl_content/1,
+  parse_lnk_content/1,
+  parse_pop_content/1
+]).
+
 -include("erlp3header.hrl").
 
 read_v22(FileHandle, Header) ->
@@ -26,16 +38,16 @@ read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) when 
 read_v22_frame(_, Frames) ->
   lists:reverse([Frame || Frame <- Frames, Frame =/= not_yet_implemented]).
 
-parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, 1:8/integer, NextFlagOffset:32/integer>>) ->
-  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, true}, {next_flag_offset, NextFlagOffset}]};
+parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, EmbeddedInfo:8/integer, NextFlagOffset:32/integer>>) ->
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, utils:boolean_code_to_atom(EmbeddedInfo)}, {next_flag_offset, NextFlagOffset}]};
 
-parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, 0:8/integer>>) ->
-  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, false}]};
+parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, EmbeddedInfo:8/integer>>) ->
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, utils:boolean_code_to_atom(EmbeddedInfo)}]};
 
 parse_frame_bin(<<"CNT">>, Size, FrameContent) ->
   Bits = Size * 8,
   <<PlayCount:Bits/integer>> = FrameContent,
-  {cnt, [{size, Size}, {playcount, PlayCount}]};
+  {cnt, [{size, Size}, {counter, PlayCount}]};
 
 parse_frame_bin(<<"COM">>, Size, FrameContent) ->
   {com, [{size, Size} | parse_com_content(FrameContent)]};
@@ -64,14 +76,16 @@ parse_frame_bin(<<"LNK">>, Size, FrameContent) ->
 parse_frame_bin(<<"MCI">>, Size, <<TOC/binary>>) ->
   {mci, [{size, Size}, {table_of_contents, TOC}]};
 
-parse_frame_bin(<<"MLL">>, Size, <<FBR:16/integer, BBR:24/integer, MBR:24/integer, BBD:8/integer, BMD:8/integer>>) ->
+parse_frame_bin(<<"MLL">>, Size, <<FBR:16/integer, BBR:24/integer, MBR:24/integer, BBD:8/integer, BMD:8/integer, DeviationInBytes:BBD/integer, DeviationInMilli:BMD/integer>>) ->
   {mll, [
     {size, Size},
     {frames_between_reference, FBR},
     {bytes_between_reference, BBR},
     {milliseconds_between_reference, MBR},
     {bit_for_bytes_deviation, BBD},
-    {bits_for_milliseconds_deviation, BMD}
+    {bits_for_milliseconds_deviation, BMD},
+    {deviation_in_bytes, DeviationInBytes},
+    {deviation_in_milliseconds, DeviationInMilli}
   ]};
 
 parse_frame_bin(<<"POP">>, Size, FrameContent) ->
@@ -97,7 +111,7 @@ RFRTR:8/integer, RFRTL:8/integer, PLTR:8/integer, PRTL:8/integer>>) ->
     {premix_right_to_left, PRTL}
   ]};
 
-parse_frame_bin(<<"RVA">>, Size, <<IncR:4/integer, IncL:4/integer, Len:8/integer, RVCR:Len/integer, RVCL:Len/integer, PVR:Len/integer, PVL:Len/integer>>) ->
+parse_frame_bin(<<"RVA">>, Size, <<0:6/integer, IncL:1/integer, IncR:1/integer, Len:8/integer, RVCR:Len/integer, RVCL:Len/integer, PVR:Len/integer, PVL:Len/integer>>) ->
   {rva, [
     {size, Size},
     {inc_or_dec_right, IncR},
@@ -149,7 +163,7 @@ parse_frame_bin(<<"UFI">>, Size, FrameContent) ->
   {ufi, [{size, Size} | parse_ufi_content(FrameContent)]};
 
 parse_frame_bin(<<"ULT">>, Size, <<Enc:8/integer, Lang:3/binary, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame(Rest) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {ContentDesc, Lyrics} ->
       {ult, [
         {size, Size},
@@ -190,12 +204,12 @@ parse_pop_content(FrameContent) ->
   end.
 
 parse_pic_content(<<Enc:8/integer, ImageFormat:3/binary, PicType:8/integer, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame(Rest) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {Description, PictureData} ->
       [
         {encoding, Enc},
         {image_format, utils:decode_string(ImageFormat)},
-        {picture_type, PicType},
+        {picture_type, utils:pic_type_code_to_atom(PicType)},
         {description, utils:decode_string(Enc, Description)},
         {picture_data, PictureData}
       ];
@@ -205,7 +219,7 @@ parse_pic_content(<<Enc:8/integer, ImageFormat:3/binary, PicType:8/integer, Rest
 
 parse_lnk_content(<<LNKEDFrame:3/binary, Rest/binary>>) ->
   LinkedFrameID = utils:decode_string(LNKEDFrame),
-  case utils:get_null_terminated_string_from_frame(Rest) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {URL, RestAfterURL} ->
       [
         {frame_identifier, LinkedFrameID},
@@ -226,14 +240,14 @@ get_additional_id_data(LinkedContent, Acc) ->
   end.
 
 parse_ipl_content(<<Encoding:8/integer, Involvements/binary>>) ->
-  get_ipls(Encoding, Involvements, []).
+  [{encoding, Encoding}, {involvements, get_ipls(Encoding, Involvements, [])}].
 
 get_ipls(Encoding, Involvements, Acc) ->
   case utils:get_null_terminated_string_from_frame(Involvements) of
     {Involvement, RestAfterInvolvement} ->
       case utils:get_null_terminated_string_from_frame(RestAfterInvolvement) of
         {Involvee, Rest} ->
-          Acc2 = [{ip, {involvement, utils:decode_string(Encoding, Involvement)}, {involvee, utils:decode_string(Encoding, Involvee)}} | Acc],
+          Acc2 = [{involvee, utils:decode_string(Encoding, Involvee)}, {involvement, utils:decode_string(Encoding, Involvement)} | Acc],
           get_ipls(Encoding, Rest, Acc2);
         _ ->
           invalid_bytes_detected
@@ -245,9 +259,9 @@ get_ipls(Encoding, Involvements, Acc) ->
 parse_geo_content(<<Encoding:8/integer, Rest/binary>>) ->
   case utils:get_null_terminated_string_from_frame(Rest) of
     {MimeType, RestAfterMimeType} ->
-      case utils:get_null_terminated_string_from_frame(RestAfterMimeType) of
+      case utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterMimeType) of
         {Filename, RestAfterFilename} ->
-          case utils:get_null_terminated_string_from_frame(RestAfterFilename) of
+          case utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterFilename) of
             {ContentDesc, EncapsulatedObject} ->
               [
                 {encoding, Encoding},
@@ -283,9 +297,9 @@ parse_etc_content(<<TimeStampFormat:8/integer, EventCode:8/integer, TimeStamp:32
   ].
 
 parse_crm_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame(FrameContent) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
     {OwnerID, Rem} ->
-      case utils:get_null_terminated_string_from_frame(Rem) of
+      case utils:get_null_terminated_string_from_frame_skip_zeros(Rem) of
         {ConExp, EncryptedData} ->
           [
             {owner_id, utils:decode_string(OwnerID)},
@@ -300,7 +314,7 @@ parse_crm_content(FrameContent) ->
   end.
 
 parse_cra_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame(FrameContent) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
     {OwnerID, Rest} ->
       <<PreviewStart:16/integer, PreviewLength:16/integer, EncryptionInfo/binary>> = Rest,
       [
@@ -314,7 +328,7 @@ parse_cra_content(FrameContent) ->
   end.
 
 parse_com_content(<<Enc:8/integer, Language:3/binary, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame(Rest) of
+  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {ShortDesc, Comment} ->
       [
         {language, utils:decode_string(Enc, Language)},

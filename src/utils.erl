@@ -37,7 +37,8 @@ trim(Bin) ->
   X.
 
 trim_blanks(X) ->
-  lists:reverse(skip_blanks_and_zeros(lists:reverse(X))).
+  RemoveLeading = skip_blanks_and_zeros(X),
+  lists:reverse(skip_blanks_and_zeros(lists:reverse(RemoveLeading))).
 
 skip_blanks_and_zeros([32 | T]) ->
   skip_blanks_and_zeros(T);
@@ -63,6 +64,15 @@ get_null_terminated_string_from_frame(FrameContent) ->
       {NTS, Rest} = split_binary(FrameContent, Start),
       <<0:8/integer, Rem/binary>> = Rest,
       {NTS, Rem};
+    nomatch ->
+      invalid_bytes_detected
+  end.
+
+get_null_terminated_string_from_frame_skip_zeros(FrameContent) ->
+  case binary:match(FrameContent, <<0>>) of
+    {Start, _Len} ->
+      {NTS, Rest} = split_binary(FrameContent, Start),
+      {NTS, list_to_binary(skip_blanks_and_zeros(binary_to_list(Rest)))};
     nomatch ->
       invalid_bytes_detected
   end.
@@ -153,3 +163,102 @@ slt_content_type_atom_to_code(Atom) ->
 header_to_atom(Header) ->
   LowerCase = string:to_lower(Header),
   list_to_atom(LowerCase).
+
+reverse_boolean_code_to_atom(Code) ->
+  case Code of
+    1 -> false;
+    _ -> true
+  end.
+
+reverse_boolean_atom_to_code(Atom) ->
+  case Atom of
+    false -> 1;
+    true -> 0
+  end.
+
+boolean_code_to_atom(Code) ->
+  case Code of
+    0 -> false;
+    _ -> true
+  end.
+
+boolean_atom_to_code(Atom) ->
+  case Atom of
+    false -> 0;
+    true -> 1
+  end.
+
+pic_type_code_to_atom(Code) ->
+  case Code of
+    ?PIC_TYPE_ARTIST -> artist;
+    ?PIC_TYPE_BAND -> band_orchestra;
+    ?PIC_TYPE_BAND_LOGO_TYPE -> band_logo_type;
+    ?PIC_TYPE_BCF -> bright_colored_fish;
+    ?PIC_TYPE_COMPOSER -> composer;
+    ?PIC_TYPE_CONDUCTOR -> conductor;
+    ?PIC_TYPE_COVER_BACK -> cover_back;
+    ?PIC_TYPE_COVER_FRONT -> cover_front;
+    ?PIC_TYPE_DURING_PERFORMANCE -> during_performance;
+    ?PIC_TYPE_DURING_RECORDING -> during_recording;
+    ?PIC_TYPE_FILE_ICON -> file_icon;
+    ?PIC_TYPE_ILLUSTRATION -> illustration;
+    ?PIC_TYPE_LEAD_ARTIST -> lead_artist;
+    ?PIC_TYPE_LEAFLET_PAGE -> leaflet_page;
+    ?PIC_TYPE_LYRICIST -> lyricist;
+    ?PIC_TYPE_MEDIA -> media;
+    ?PIC_TYPE_MOVIE -> movie;
+    ?PIC_TYPE_OTHER -> other;
+    ?PIC_TYPE_OTHER_FILE_ICON -> other_file_icon;
+    ?PIC_TYPE_PUBLISHER_LOGO_TYPE -> publisher_logo_type;
+    ?PIC_TYPE_RECORDING_LOCATION -> recording_location
+  end.
+
+pic_type_atom_to_code(Atom) ->
+  case Atom of
+    artist -> ?PIC_TYPE_ARTIST;
+    band_orchestra -> ?PIC_TYPE_BAND;
+    bright_colored_fish -> ?PIC_TYPE_BCF;
+    composer -> ?PIC_TYPE_COMPOSER;
+    conductor -> ?PIC_TYPE_CONDUCTOR;
+    cover_back -> ?PIC_TYPE_COVER_BACK;
+    cover_front -> ?PIC_TYPE_COVER_FRONT;
+    during_performance -> ?PIC_TYPE_DURING_PERFORMANCE;
+    during_recording -> ?PIC_TYPE_DURING_RECORDING;
+    file_icon -> ?PIC_TYPE_FILE_ICON;
+    illustration -> ?PIC_TYPE_ILLUSTRATION;
+    lead_artist -> ?PIC_TYPE_LEAD_ARTIST;
+    leaflet_page -> ?PIC_TYPE_LEAFLET_PAGE;
+    lyricist -> ?PIC_TYPE_LYRICIST;
+    media -> ?PIC_TYPE_MEDIA;
+    movie -> ?PIC_TYPE_MOVIE;
+    other -> ?PIC_TYPE_OTHER;
+    other_file_icon -> ?PIC_TYPE_OTHER_FILE_ICON;
+    publisher_logo_type -> ?PIC_TYPE_PUBLISHER_LOGO_TYPE;
+    recording_location -> ?PIC_TYPE_RECORDING_LOCATION
+  end.
+
+recieved_as_code_to_atom(Code) ->
+  case Code of
+    ?RCVD_AS_COMPRESSED_AUDIO_ON_CD -> compressed_audio_on_cd;
+    ?RCVD_AS_FILE_OVER_INTERNET -> file_over_intenet;
+    ?RCVD_AS_MUSIC_ON_OTHER_MEDIA -> music_on_other_media;
+    ?RCVD_AS_NON_MUSICAL_MERCHANDISE -> non_musical_merchandise;
+    ?RCVD_AS_NOTE_SHEETS -> note_sheets;
+    ?RCVD_AS_NOTE_SHEETS_IN_A_BOOK -> note_sheets_in_a_book;
+    ?RCVD_AS_OTHER -> other;
+    ?RCVD_AS_STANDARD_CD_ALBUM -> standard_cd_album;
+    ?RCVD_AS_STREAM_OVER_INTERNET -> stream_over_internet
+  end.
+
+recieved_as_atom_to_code(Atom) ->
+  case Atom of
+    compressed_audio_on_cd -> ?RCVD_AS_COMPRESSED_AUDIO_ON_CD;
+    file_over_internet -> ?RCVD_AS_FILE_OVER_INTERNET;
+    music_on_other_media -> ?RCVD_AS_MUSIC_ON_OTHER_MEDIA;
+    non_musical_merchandise -> ?RCVD_AS_NON_MUSICAL_MERCHANDISE;
+    note_sheets -> ?RCVD_AS_NOTE_SHEETS;
+    note_sheets_in_a_book -> ?RCVD_AS_NOTE_SHEETS_IN_A_BOOK;
+    other -> ?RCVD_AS_OTHER;
+    standard_cd_album -> ?RCVD_AS_STANDARD_CD_ALBUM;
+    stream_over_internet -> ?RCVD_AS_STREAM_OVER_INTERNET
+  end.
