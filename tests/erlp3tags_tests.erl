@@ -351,7 +351,6 @@ test_parse_v23_frame_bin() ->
 
 
   ActualUSLT = v23_reader:parse_frame_bin(<<"USLT">>, 10, Flags, <<0, "SPA", "This Is A Lyrics Description", 0, "this is the lyrics">>),
-  io:format("Actual: ~p~n", [ActualUSLT]),
   ExpectedUSLT = {uslt, [
     {size, 10},
     Flags,
@@ -362,6 +361,24 @@ test_parse_v23_frame_bin() ->
   ]},
   ActualUSLT  = ExpectedUSLT,
 
+  ActualTALB = v23_reader:parse_frame_bin(<<"TALB">>, 10, Flags, <<0, "Hello TALB">>),
+  ExpectedTALB = {talb, [
+    {size, 10},
+    Flags,
+    {encoding, 0},
+    {textstring, "Hello TALB"}
+  ]},
+  ActualTALB = ExpectedTALB,
+
+  ActualWORS = v23_reader:parse_frame_bin(<<"WORS">>, 10, Flags, <<"http://nalyricsradio.com.ng">>),
+  ExpectedWORS = {wors, [
+    {size, 10},
+    Flags,
+    {url, "http://nalyricsradio.com.ng"}
+  ]},
+  ActualWORS = ExpectedWORS,
+
+  %io:format("Actual: ~p~n", [ActualUSLT]),
   erlog:info("Testing v23_reader:parse_frame_bin/1 - passed~n").
 
 test_parse_v22_frame_bin() ->

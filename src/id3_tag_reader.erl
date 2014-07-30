@@ -82,6 +82,20 @@ _UnusedFlags:5, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
     ]
   };
 
+read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer, C:1/integer, D:1/integer,
+_UnusedFlags:4, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
+  when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 4 ->
+  {Unsync, Extended, Experimental, Footer} = {A, B, C, D},
+  {ok, Size} = utils:synch_safe(<<S1, S2, S3, S4>>),
+
+  {ok,
+    [
+      {version, {2, MajV, MinV}},
+      {flags, [{unsync, Unsync}, {extended, Extended}, {experimental, Experimental}, {footer, Footer}]},
+      {size, Size}
+    ]
+  };
+
 read_v2_header(_) ->
   {error, invalid_v2_header_bytes}.
 
@@ -112,7 +126,7 @@ read_v2({2, 3, _}, FileHandle, Header) ->
   erlog:info("Found Version 2.3.0~n"),
   v23_reader:read_v23(FileHandle, Header);
 
-read_v2({2, 4, 0}, _FileHandle, _Header) ->
+read_v2({2, 4, _}, _FileHandle, _Header) ->
   erlog:info("Found Version 2.4.0~n"),
   %io:format("Header: ~p~n", [Header]),
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),

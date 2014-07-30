@@ -342,6 +342,27 @@ parse_frame_bin(<<"USLT">>, Size, Flags, FrameContent) ->
     Flags | parse_uslt_content(FrameContent)
   ]};
 
+parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary, _T4:1/binary>> = Header, Size, Flags, <<Enc:8/integer, Rest/binary>>) ->
+  TextData = case utils:get_null_terminated_string_from_frame(Rest) of
+               {Data, _Rem} ->
+                 Data;
+               _ ->
+                 Rest
+             end,
+  {utils:header_to_atom(utils:decode_string(Header)), [
+    {size, Size},
+    Flags,
+    {encoding, Enc},
+    {textstring, utils:decode_string(Enc, TextData)}
+  ]};
+
+parse_frame_bin(<<$W, _W2:1/binary, _W3:1/binary, _W4:1/binary>> = Header, Size, Flags, <<URL/binary>>) ->
+  {utils:header_to_atom(utils:decode_string(Header)), [
+    {size, Size},
+    Flags,
+    {url, utils:decode_string(URL)}
+  ]};
+
 parse_frame_bin(_FID, _Size, _Flags, _FrameContent) ->
   not_yet_implemented.
 
