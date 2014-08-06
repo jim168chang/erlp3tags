@@ -35,7 +35,9 @@ read_tag(File) ->
       IDv1TagResult = case ID3V1Tag of
                         <<"TAG">> ->
                           erlog:info("Found ID3v1~n"),
-                          parse_v1_tag(S);
+                          file:position(S, {eof, -128}),
+                          {ok, ID3V1Data} = file:read(S, 128),
+                          parse_v1_tag(ID3V1Data);
                         _ ->
                           erlog:info("ID3v1 Not Found~n"),
                           not_found
@@ -139,12 +141,31 @@ read_v2({2, 4, _}, _ID3Data) ->
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
   ok.
 
-parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1, Track:1, Genre:1>> = _Result) ->
-  {idv1tag, #id3v1_1{tag = "ID3v1.1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, track = Track, genre = Genre}};
+parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1/integer, Track:1/integer, Genre:8/integer>> = _Result) ->
+  {idv1tag,
+    [
+      {tag, "ID3v1.1"},
+      {title , utils:decode_string(Title)},
+      {artist , utils:decode_string(Artist)},
+      {album , utils:decode_string(Album)},
+      {year , Year},
+      {comment , utils:decode_string(Comment)},
+      {track , Track},
+      {genre , Genre}
+    ]};
 
 
-parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8>>) ->
-  {idv1tag, #id3v1{tag = "ID3v1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, genre = Genre}};
+parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8/integer>>) ->
+  {idv1tag,
+    [
+      {tag , "ID3v1"},
+      {title , utils:decode_string(Title)},
+      {artist , utils:decode_string(Artist)},
+      {album , utils:decode_string(Album)},
+      {year , Year},
+      {comment , utils:decode_string(Comment)},
+      {genre , Genre}
+    ]};
 
 parse_v1_tag(_FileHandle) ->
   ok.
