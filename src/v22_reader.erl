@@ -10,7 +10,7 @@
 -author("aardvocate").
 
 %% API
--export([read_v22/2, parse_frame_bin/3]).
+-export([read_v22/1, parse_frame_bin/3]).
 
 -export([
   parse_cra_content/1,
@@ -25,8 +25,7 @@
 
 -include("erlp3header.hrl").
 
-read_v22(FileHandle, Header) ->
-  {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
+read_v22(ID3Data) ->
   Result = read_v22_frame(ID3Data, []),
   Result.
 

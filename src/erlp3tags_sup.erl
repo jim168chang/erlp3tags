@@ -24,5 +24,17 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+  RestartStategy = one_for_one,
+  MaxRestarts = 5,
+  MaxSecondsBetweenRestarts = 10,
+
+  SupFlags = {RestartStategy, MaxRestarts, MaxSecondsBetweenRestarts},
+
+  Restart = permanent,
+  Shutdown = 1000,
+  Type = worker,
+
+  WriterServerChildDef = {"ID3 Writer Server", {id3_tag_writer, start_link, []}, Restart, Shutdown, Type, [id3_tag_writer]},
+
+  {ok, {SupFlags, [WriterServerChildDef]}}.
 

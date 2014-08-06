@@ -13,6 +13,9 @@
 -record(id3v1, {tag, title, artist, album, year, comment, genre}).
 -record(id3v1_1, {tag, title, artist, album, year, comment, track, genre}).
 
+-record(tag, {tag_id, value}).
+-record(id3V2, {tags = [], files = []}).
+
 -define(ETC_END_INITIAL_SILENCE, 1).
 -define(ETC_INTRO_START, 2).
 -define(ETC_MAIN_PART_START, 3).
@@ -73,3 +76,9 @@
 -define(RCVD_AS_NOTE_SHEETS_IN_A_BOOK, 6).
 -define(RCVD_AS_MUSIC_ON_OTHER_MEDIA, 7).
 -define(RCVD_AS_NON_MUSICAL_MERCHANDISE, 8).
+
+-define(ID3V1, v1).
+-define(ID3V1_1, v11).
+-define(ID3V2, v2).
+-define(ID3V2_3, v23).
+-define(ID3V2_4, v24).

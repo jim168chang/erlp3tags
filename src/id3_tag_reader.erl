@@ -10,7 +10,7 @@
 -author("aardvocate").
 
 %% API
--export([read_tag/1, read_v2_header/1]).
+-export([read_tag/1, read_v2_header/1, read_v2_ex_header/2, remove_v2_headers/1]).
 
 -include("erlp3header.hrl").
 
@@ -46,12 +46,18 @@ read_tag(File) ->
       error
   end.
 
+remove_v2_headers(FileHandle) ->
+  {ok, FirstTen} = file:read(FileHandle, 10),
+  {ok, Header} = read_v2_header(FirstTen),
+  {ok, {ExtendedHeader, ID3Data}} = read_v2_ex_header(FileHandle, Header),
+  {ok, Header, ExtendedHeader, ID3Data}.
+
 parse_v2_tag(FileHandle) ->
   {ok, FirstTen} = file:read(FileHandle, 10),
   {ok, Header} = read_v2_header(FirstTen),
-  {ok, ExtendedHeader} = read_v2_ex_header(FileHandle, Header),
+  {ok, {ExtendedHeader, ID3Data}} = read_v2_ex_header(FileHandle, Header),
   Version = proplists:get_value(version, Header),
-  V2Data = read_v2(Version, FileHandle, Header),
+  V2Data = read_v2(Version, ID3Data),
   [{header, Header}, {extended_header, ExtendedHeader}, {tags, V2Data}].
 
 read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer,
@@ -63,7 +69,7 @@ _UnusedFlags:6, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   {ok,
     [
       {version, {2, MajV, MinV}},
-      {flags, [{unsync, Unsync}, {compression, Compression}]},
+      {flags, [{unsync, utils:boolean_code_to_atom(Unsync)}, {compression, utils:boolean_code_to_atom(Compression)}]},
       {size, Size}
     ]
   };
@@ -77,7 +83,7 @@ _UnusedFlags:5, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   {ok,
     [
       {version, {2, MajV, MinV}},
-      {flags, [{unsync, Unsync}, {extended, Extended}, {experimental, Experimental}]},
+      {flags, [{unsync, utils:boolean_code_to_atom(Unsync)}, {extended, utils:boolean_code_to_atom(Extended)}, {experimental, utils:boolean_code_to_atom(Experimental)}]},
       {size, Size}
     ]
   };
@@ -102,42 +108,44 @@ read_v2_header(_) ->
 read_v2_ex_header(FileHandle, Header) ->
   Flags = proplists:get_value(flags, Header),
   ReadExtendedHeader = proplists:get_value(extended, Flags),
+  {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
   {ok, if
          ReadExtendedHeader =:= 1 ->
-           {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
            <<ExSize:32/integer, ExFlagCRC:1/integer, _RemFlags:15, Rest/binary>> = ID3Data,
            ExHeader = [{extended_header_size, ExSize}, {extended_header_crc_present, ExFlagCRC} | []],
            if
              ExFlagCRC =:= 1 ->
-               <<CData:32/integer, _RemIDData/binary>> = Rest,
-               [{crcdata, CData} | ExHeader];
+               <<CData:32/integer, RemIDData/binary>> = Rest,
+               {[{crcdata, CData} | ExHeader], RemIDData};
              true ->
-               ExHeader
+               {ExHeader, Rest}
            end;
          true ->
-           []
-       end}.
+           {[], ID3Data}
+       end
+  }.
 
-read_v2({2, 2, _}, FileHandle, Header) ->
+read_v2({2, 2, _}, ID3Data) ->
   erlog:info("Found Version 2.2.0~n"),
-  v22_reader:read_v22(FileHandle, Header);
+  v22_reader:read_v22(ID3Data);
 
-read_v2({2, 3, _}, FileHandle, Header) ->
+read_v2({2, 3, _}, ID3Data) ->
   erlog:info("Found Version 2.3.0~n"),
-  v23_reader:read_v23(FileHandle, Header);
+  v23_reader:read_v23(ID3Data);
 
-read_v2({2, 4, _}, _FileHandle, _Header) ->
+read_v2({2, 4, _}, _ID3Data) ->
   erlog:info("Found Version 2.4.0~n"),
   %io:format("Header: ~p~n", [Header]),
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
   ok.
 
+parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1, Track:1, Genre:1>> = _Result) ->
+  {idv1tag, #id3v1_1{tag = "ID3v1.1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, track = Track, genre = Genre}};
+
+
+parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8>>) ->
+  {idv1tag, #id3v1{tag = "ID3v1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, genre = Genre}};
+
 parse_v1_tag(_FileHandle) ->
   ok.
 
-%%parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1, Track:1, Genre:1>> = _Result) ->
-%%  {ok, "ID3v1.1", #id3v1_1{tag = "ID3v1.1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, track = Track, genre = Genre}};
-
-
-%%parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:30/binary, Genre:8>>) ->
-%%  {ok, "ID3v1", #id3v1{tag = "ID3v1", title = Title, artist = Artist, album = Album, year = Year, comment = Comment, genre = Genre}}.

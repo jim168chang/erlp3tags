@@ -1,12 +1,13 @@
 {application, erlp3tags,
- [
-  {description, ""},
-  {vsn, "1"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {mod, { erlp3tags_app, []}},
-  {env, []}
- ]}.
+  [
+    {description, "ID3 Tag Reader/Writer"},
+    {vsn, "1.0"},
+    {registered, [erlp3tags_sup, erlp3tags_app, id3_tag_writer]},
+    {applications, [
+      kernel,
+      stdlib
+    ]},
+    {mod, {erlp3tags_app, []}},
+    {env, []},
+    {start_phase, []}
+  ]}.

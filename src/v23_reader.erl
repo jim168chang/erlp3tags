@@ -10,10 +10,23 @@
 -author("aardvocate").
 
 %% API
--export([read_v23/2, parse_frame_bin/4]).
+-export([read_v23/1, parse_frame_bin/4, find_v23_frame/2]).
 
-read_v23(FileHandle, Header) ->
-  {ok, ID3Data} = file:read(FileHandle, proplists:get_value(size, Header)),
+find_v23_frame(FrameBin, ID3Data) when is_binary(ID3Data) ->
+  case ID3Data of
+    <<FrameID:4/binary, Size:32/integer, _A:1/integer, _B:1/integer, _C:1/integer, _Rem1:5, _I:1/integer, _J:1/integer, _K:1/integer, _Rem2:5, Rest/binary>> ->
+      if
+        FrameBin =:= FrameID ->
+          {ok, found};
+        true ->
+          {_FrameContent, RestData} = split_binary(Rest, Size),
+          find_v23_frame(FrameBin, RestData)
+      end;
+    _ ->
+      {ok, not_found}
+  end.
+
+read_v23(ID3Data) ->
   Result = read_v23_frame(ID3Data, []),
   Result.
 
@@ -142,7 +155,7 @@ parse_frame_bin(<<"OWNE">>, Size, Flags, FrameContent) ->
     Flags | parse_owne_content(FrameContent)
   ]};
 
-parse_frame_bin(<<"PRIV">>,Size, Flags, FrameContent) ->
+parse_frame_bin(<<"PRIV">>, Size, Flags, FrameContent) ->
   case utils:get_null_terminated_string_from_frame(FrameContent) of
     {OwnerID, PrivateData} ->
       {priv, [
@@ -211,7 +224,7 @@ parse_frame_bin(<<"RVAD">>, Size, Flags, <<0:6/integer, IncL:1/integer, IncR:1/i
   ]};
 
 parse_frame_bin(<<"RVAD">>, Size, Flags, <<0:4/integer, IncLB:1/integer, IncRB:1/integer, IncL:1/integer, IncR:1/integer, Len:8/integer, RVCR:Len/integer, RVCL:Len/integer, PVR:Len/integer, PVL:Len/integer,
-                                            RVCRB:Len/integer, RVCLB:Len/integer, PVRB:Len/integer, PVLB:Len/integer>>) ->
+RVCRB:Len/integer, RVCLB:Len/integer, PVRB:Len/integer, PVLB:Len/integer>>) ->
   {rvad, [
     {size, Size},
     Flags,
@@ -334,7 +347,7 @@ parse_frame_bin(<<"USER">>, Size, Flags, <<Enc:8/integer, Language:3/binary, Ter
     {language, utils:decode_string(Language)},
     {terms_of_use, utils:decode_string(Enc, TermsOfUse)}
   ]
-};
+  };
 
 parse_frame_bin(<<"USLT">>, Size, Flags, FrameContent) ->
   {uslt, [

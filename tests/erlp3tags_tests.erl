@@ -16,7 +16,7 @@
 
 test_read_header(FileHandle) ->
   Expected = {ok, [{version, {2, 3, 0}},
-    {flags, [{unsync, 0}, {extended, 0}, {experimental, 0}]},
+    {flags, [{unsync, false}, {extended, false}, {experimental, false}]},
     {size, 35250}]},
   {ok, FirstTen} = file:pread(FileHandle, 0, 10),
   Actual = id3_tag_reader:read_v2_header(FirstTen),
@@ -572,12 +572,48 @@ test_parse_v22_frame_bin() ->
 
   erlog:info("Testing v22_reader:parse_frame_bin/3 - passed~n").
 
+test_find_v23_frame(FileHandle) ->
+  {ok, FirstTen} = file:read(FileHandle, 10),
+  {ok, Header} = id3_tag_reader:read_v2_header(FirstTen),
+  {ok, {_ExtendedHeader, ID3Data}} = id3_tag_reader:read_v2_ex_header(FileHandle, Header),
+  _Version = proplists:get_value(version, Header),
+  Actual = v23_reader:find_v23_frame(<<"TYER">>, ID3Data),
+  Expected = {ok, found},
+  Actual = Expected,
+  erlog:info("Testing v23_reader:find_v23_frame/3 - passed~n").
+
+test_write_pic() ->
+  erlp3tags:start(),
+  {ok, PicData} = file:read_file("misc/pic.jpg"),
+  TagValue = {apic, [
+    {size, filelib:file_size("misc/pic.jpg")},
+    {flags, [
+      {tag_alter_preservation,true},
+      {file_alter_preservation,true},
+      {read_only,false},
+      {compression,false},
+      {encryption,false},
+      {grouping_identity,false}
+    ]},
+    {encoding, 0},
+    {mime_type,"image/jpeg"},
+    {picture_type,other},
+    {description,"Edited JPEG"},
+    {picture_data, PicData}
+  ]},
+
+  id3_tag_writer:writeV2(v23, TagValue, "APIC", "misc/sgc.mp3"),
+  id3_tag_writer:syncV2().
+
+
 tests() ->
   erlog:start(),
   erlog:load_config_file("conf/erlog.conf"),
   erlog:info("~n---------------Starting Tests---------------~n"),
+  test_write_pic(),
   File = filename:join("misc", "mi_one_six.mp3"),
   {ok, S} = file:open(File, [read, binary, raw]),
+  test_find_v23_frame(S),
   id3_tag_reader:read_tag(File),
   test_read_header(S),
   test_synch_safe(),
@@ -586,5 +622,5 @@ tests() ->
   test_text_header_to_atom(),
   erlog:info("~n---------------Tests Finished---------------~n"),
 
-  erlog:error("Result: ~p~n", [id3_tag_reader:read_tag(filename:join("misc", "ile_aye_azadus_ft_vector.mp3"))]),
+  erlog:error("Result: ~p~n", [id3_tag_reader:read_tag(filename:join("misc", "sgc.mp3"))]),
   ok.
