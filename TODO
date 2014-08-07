@@ -1,0 +1,7 @@
+For now do
+	Title = Text Frame (TIT2, TT2)
+	Artist = (TPE1, TPE2, tp1, tp2)
+	Album = (talb, tal)
+	Genre = TCON, tco
+	Lyrics  = USLT, ULT, TIT3, TT3
+

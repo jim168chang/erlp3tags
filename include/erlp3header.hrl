@@ -14,7 +14,7 @@
 -record(id3v1_1, {tag, title, artist, album, year, comment, track, genre}).
 
 -record(tag, {tag_id, value}).
--record(id3V2, {tags = [], files = []}).
+-record(id3V2, {tags = [], file}).
 
 -define(ETC_END_INITIAL_SILENCE, 1).
 -define(ETC_INTRO_START, 2).

@@ -12,7 +12,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, writeV2/4, syncV2/0]).
+-export([start_link/0, writeV2/3, syncV2/0, set_file/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -27,7 +27,7 @@
 -include("erlp3header.hrl").
 
 %%%===================================================================
-%%% API
+%%% Gen Server
 %%%===================================================================
 
 start_link() ->
@@ -38,19 +38,30 @@ start_link() ->
 init([]) ->
   {ok, #id3V2{}}.
 
+handle_call({set_file, File}, _From, State) ->
+  {reply, ok, State#id3V2{file = File}};
+
 handle_call({sync, v2}, _From, State) ->
   State2 = write_to_file(v2, State),
   {reply, ok, State2};
 
+handle_call({write, NewTagVal, ?ID3V2_3, TagID}, _From, State) ->
+  Tags = State#id3V2.tags,
+  case State#id3V2.file of
+    undefined ->
+      Reply = {error, "Call set_file/1 before calling write"},
+      {reply, Reply, State};
+    [] ->
+      Reply = {error, "Call set_file/1 before calling write"},
+      {reply, Reply, State};
+    _ ->
+      Tag = #tag{tag_id = TagID, value = NewTagVal},
+      NewState = State#id3V2{tags = [Tag | Tags]},
+      {reply, ok, NewState}
+  end;
+
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
-
-handle_cast({write, NewTagVal, ?ID3V2_3, TagID, File}, State) ->
-  Tags = State#id3V2.tags,
-  Files = State#id3V2.files,
-  Tag = #tag{tag_id = TagID, value = NewTagVal},
-  State2 = State#id3V2{tags = [Tag | Tags], files = [File | Files]},
-  {noreply, State2};
 
 handle_cast(_Request, State) ->
   {noreply, State}.
@@ -66,20 +77,34 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 %%%===================================================================
-%%% Internal functions
+%%% Public functions
 %%%===================================================================
 
-writeV2(?ID3V2_3 = Version, NewTagVal, TagID, File) ->
-  gen_server:cast(?SERVER, {write, NewTagVal, Version, TagID, File});
+writeV2(?ID3V2_3 = Version, NewTagVal, TagID) ->
+  case gen_server:call(?SERVER, {write, NewTagVal, Version, TagID}) of
+    {error, Reason} ->
+      Reason;
+    _ ->
+      ok
+  end;
 
-writeV2(?ID3V2_4, _NewTagVal, _TagID, _File) ->
+writeV2(?ID3V2_4, _NewTagVal, _TagID) ->
   not_yet_implemented.
 
 syncV2() ->
   gen_server:call(?SERVER, {sync, v2}).
 
-write_to_file(v2, #id3V2{tags = [#tag{tag_id = TagID, value = Value} | Tags], files = [File | Files]}) ->
-  State2 = #id3V2{tags = Tags, files = Files},
+set_file(File) ->
+  gen_server:call(?SERVER, {set_file, File}).
+
+
+%%=======================================================================
+%%% Private Functions
+%%=======================================================================
+
+write_to_file(v2, #id3V2{tags = [#tag{tag_id = TagID, value = Value} | Tags], file = File}) ->
+  io:format("Writing Tag: ~p~n", [TagID]),
+  State2 = #id3V2{tags = Tags, file = File},
   {ok, [{idv1tag, _IDv1TagResult}, {idv2tag, [{header, V2Header}, {extended_header, _extHeader}, {tags, V2Tags}]}]} = id3_tag_reader:read_tag(File),
   TempFile = File ++ ".tmp",
   {ok, TempFileHandle} = file:open(TempFile, [write, binary, raw]),
@@ -116,8 +141,7 @@ write_to_file(v2, #id3V2{tags = [#tag{tag_id = TagID, value = Value} | Tags], fi
 write_to_file(_, State) ->
   State.
 
-write_frame_header("APIC" = TagID, TempFileHandle, TagValue) ->
-  Size = proplists:get_value(size, TagValue),
+write_frame_header(TagID, TempFileHandle, TagValue) ->
   Flags = proplists:get_value(flags, TagValue),
   TagAlterPreservation = utils:reverse_boolean_atom_to_code(proplists:get_value(tag_alter_preservation, Flags)),
   FileAlterPreservation = utils:reverse_boolean_atom_to_code(proplists:get_value(file_alter_preservation, Flags)),
@@ -125,17 +149,13 @@ write_frame_header("APIC" = TagID, TempFileHandle, TagValue) ->
   Compression = utils:boolean_atom_to_code(proplists:get_value(compression, Flags)),
   Encryption = utils:boolean_atom_to_code(proplists:get_value(encryption, Flags)),
   GroupingID = utils:boolean_atom_to_code(proplists:get_value(grouping_identity, Flags)),
+  FlagsBin = <<TagAlterPreservation:1/integer, FileAlterPreservation:1/integer, ReadOnly:1/integer, 0:5/integer, Compression:1/integer, Encryption:1/integer, GroupingID:1/integer, 0:5/integer>>,
+  Size = proplists:get_value(size, TagValue),
+
   file:write(TempFileHandle, list_to_binary(TagID)),
   <<A:8/integer, B:8/integer, C:8/integer, D:8/integer>> = <<Size:32/integer>>,
   file:write(TempFileHandle, <<A:8/integer, B:8/integer, C:8/integer, D:8/integer>>),
-  FlagsBin = <<TagAlterPreservation:1/integer, FileAlterPreservation:1/integer, ReadOnly:1/integer, 0:5/integer, Compression:1/integer, Encryption:1/integer, GroupingID:1/integer, 0:5/integer>>,
-  file:write(TempFileHandle, FlagsBin);
-
-write_frame_header("PIC", TempFileHandle, TagValue) ->
-  write_frame_header("APIC", TempFileHandle, TagValue);
-
-write_frame_header(_Any, _TempFileHandle, _TagValue) ->
-  ok.
+  file:write(TempFileHandle, FlagsBin).
 
 write_frame(TempFileHandle, {apic, TagValue}, TagID) ->
   write_frame_header(TagID, TempFileHandle, TagValue),
@@ -151,10 +171,19 @@ write_frame(TempFileHandle, {apic, TagValue}, TagID) ->
   file:write(TempFileHandle, PicData),
   ok;
 
+write_frame(TempFileHandle, {_TagIDLowerCase, TagValue}, [H | _Rest] = TagID) when H =:= 84 ->
+  write_frame_header(TagID, TempFileHandle, TagValue),
+  Encoding = proplists:get_value(encoding, TagValue),
+  TextString = proplists:get_value(textstring, TagValue),
+  file:write(TempFileHandle, binary:encode_unsigned(Encoding)),
+  file:write(TempFileHandle, list_to_binary(TextString ++ "\0")),
+  ok;
+
 write_frame(TempFileHandle, {pic, TagValue}, TagID) ->
   write_frame(TempFileHandle, {apic, TagValue}, TagID);
 
-write_frame(_TempFileHandle, _TagID, _TagValue) ->
+
+write_frame(_TempFileHandle, _TagValue, _TagID) ->
   ok.
 
 write_all_frames(TempFileHandle, TagID, [Key | Keys], V2Tags) ->
