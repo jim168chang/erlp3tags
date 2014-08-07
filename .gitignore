@@ -5,3 +5,4 @@ ebin
 logs
 misc
 erl_crash.dump
+.DS_Store

@@ -581,8 +581,60 @@ test_find_v23_frame(FileHandle) ->
   Actual = Expected,
   erlog:info("Testing v23_reader:find_v23_frame/3 - passed~n").
 
-test_write_pic() ->
+test_write() ->
   erlp3tags:start(),
+  Album = "Test Me Write Album\0",
+  %% size if length of encoding + length of Album
+  AlbumValue = {talb, [
+    {size, 1 + length(Album)},
+    {flags, [
+      {tag_alter_preservation,true},
+      {file_alter_preservation,true},
+      {read_only,false},
+      {compression,false},
+      {encryption,false},
+      {grouping_identity,false}
+    ]},
+    {encoding, 0},
+    {textstring, Album}
+  ]},
+
+  Genre = "@nalyricsafrica\0",
+  %% size if length of encoding + length of Genre
+  GenreValue = {tcon, [
+    {size, 1 + length(Genre)},
+    {flags, [
+      {tag_alter_preservation,true},
+      {file_alter_preservation,true},
+      {read_only,false},
+      {compression,false},
+      {encryption,false},
+      {grouping_identity,false}
+    ]},
+    {encoding, 0},
+    {textstring, Genre}
+  ]},
+
+  Lyrics = "This is a lyrics of the test lyrics in the test lyrics",
+  ContentDesc = "This Is A Lyrics Description\0",
+  %% size if length of encoding + length of language + length of Content Desc + length of lyrics
+  LyricsValue = {uslt, [
+    {size, 1 + 3 + length(ContentDesc) + length(Lyrics)},
+    {flags, [
+      {tag_alter_preservation,true},
+      {file_alter_preservation,true},
+      {read_only,false},
+      {compression,false},
+      {encryption,false},
+      {grouping_identity,false}
+    ]},
+    {encoding, 0},
+    {language, "SPA"},
+    {content_descriptor, ContentDesc},
+    {lyrics, Lyrics}
+  ]},
+
+
   {ok, PicData} = file:read_file("misc/pic.jpg"),
   Size = filelib:file_size("misc/pic.jpg") + 1 + length("image/jpeg\0") + 1 + length("Edited JPEG\0"),
   TagValue = {apic, [
@@ -596,60 +648,24 @@ test_write_pic() ->
       {grouping_identity,false}
     ]},
     {encoding, 0},
-    {mime_type,"image/jpeg"},
+    {mime_type,"image/jpeg\0"},
     {picture_type,other},
-    {description,"Edited JPEG"},
+    {description,"Edited JPEG\0"},
     {picture_data, PicData}
   ]},
 
   ok = id3_tag_writer:set_file(filename:join("misc", "sgc.mp3")),
   ok = id3_tag_writer:writeV2(v23, TagValue, "APIC"),
-  ok = id3_tag_writer:syncV2().
-
-test_write_textstring() ->
-  erlp3tags:start(),
-  Album = "Test Me Write Album",
-  Genre = "@nalyricsafrica",
-
-  AlbumValue = {talb, [
-    {size, 2 + length(Album)},
-    {flags, [
-      {tag_alter_preservation,true},
-      {file_alter_preservation,true},
-      {read_only,false},
-      {compression,false},
-      {encryption,false},
-      {grouping_identity,false}
-    ]},
-    {encoding, 0},
-    {textstring, Album}
-  ]},
-
-  GenreValue = {tcon, [
-    {size, 2 + length(Genre)},
-    {flags, [
-      {tag_alter_preservation,true},
-      {file_alter_preservation,true},
-      {read_only,false},
-      {compression,false},
-      {encryption,false},
-      {grouping_identity,false}
-    ]},
-    {encoding, 0},
-    {textstring, Genre}
-  ]},
-
-  ok = id3_tag_writer:set_file(filename:join("misc", "sgc.mp3")),
   ok = id3_tag_writer:writeV2(v23, AlbumValue, "TALB"),
   ok = id3_tag_writer:writeV2(v23, GenreValue, "TCON"),
+  ok = id3_tag_writer:writeV2(v23, LyricsValue, "USLT"),
   ok = id3_tag_writer:syncV2().
 
 tests() ->
   erlog:start(),
   erlog:load_config_file("conf/erlog.conf"),
   erlog:info("~n---------------Starting Tests---------------~n"),
-  test_write_pic(),
-  test_write_textstring(),
+  test_write(),
   File = filename:join("misc", "mi_one_six.mp3"),
   {ok, S} = file:open(File, [read, binary, raw]),
   test_find_v23_frame(S),
