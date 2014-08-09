@@ -63,7 +63,7 @@ handle_cast({sync, v2},  #id3V2{tags = [#tag{tag_id = _TagID, value = _Value} | 
   TempFile = File ++ ".tmp",
   file:delete(TempFile),
   State2 = write_to_file(v2, State, []),
-  {reply, ok, State2};
+  {noreply, State2};
 
 handle_cast(_Request, State) ->
   {noreply, State}.
