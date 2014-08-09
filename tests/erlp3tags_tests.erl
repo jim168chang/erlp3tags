@@ -659,7 +659,8 @@ test_write() ->
   ok = id3_tag_writer:writeV2(v23, AlbumValue, "TALB"),
   ok = id3_tag_writer:writeV2(v23, GenreValue, "TCON"),
   ok = id3_tag_writer:writeV2(v23, LyricsValue, "USLT"),
-  ok = id3_tag_writer:syncV2().
+  ok = id3_tag_writer:syncV2(),
+  erlog:info("Testing id3_tag_writer:write - passed~n").
 
 tests() ->
   erlog:start(),
@@ -667,6 +668,8 @@ tests() ->
   erlog:info("~n---------------Starting Tests---------------~n"),
   test_write(),
   File = filename:join("misc", "mi_one_six.mp3"),
+  Version = id3_tag_reader:get_id3_version(File),
+  io:format("Version: ~p~n", [Version]),
   {ok, S} = file:open(File, [read, binary, raw]),
   test_find_v23_frame(S),
   id3_tag_reader:read_tag(File),

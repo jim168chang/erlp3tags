@@ -1,7 +1,8 @@
-For now do
-	Title = Text Frame (TIT2, TT2)
-	Artist = (TPE1, TPE2, tp1, tp2)
-	Album = (talb, tal)
-	Genre = TCON, tco
-	Lyrics  = USLT, ULT, TIT3, TT3
+idv2.4
 
+other idv2.3 frames
+	done for apic, uslt, t***
+other idv2.0 frames
+	done for pic, ult, t**
+
+Some documentation.

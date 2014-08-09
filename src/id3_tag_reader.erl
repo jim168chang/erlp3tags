@@ -10,7 +10,7 @@
 -author("aardvocate").
 
 %% API
--export([read_tag/1, read_v2_header/1, read_v2_ex_header/2, remove_v2_headers/1]).
+-export([read_tag/1, get_id3_version/1, read_v2_header/1, read_v2_ex_header/2, remove_v2_headers/1]).
 
 -include("erlp3header.hrl").
 
@@ -44,6 +44,31 @@ read_tag(File) ->
                       end,
       file:close(S),
       {ok, [{idv1tag, IDv1TagResult}, {idv2tag, IDv2TagResult}]};
+    _Error ->
+      error
+  end.
+
+get_id3_version(File) ->
+  case file:open(File, [read, binary, raw]) of
+    {ok, S} ->
+      erlog:info("Checking for V2~n"),
+      {ok, IDv2Tag} = file:pread(S, 0, 3),
+      Version = case IDv2Tag of
+                        <<"ID3">> ->
+                          {ok, Header, _ExtendedHeader, _ID3Data} = remove_v2_headers(S),
+                          {ok, proplists:get_value(version, Header)};
+                        _ ->
+                          file:position(S, {eof, -128}),
+                          {ok, ID3V1Data} = file:read(S, 128),
+                           case ID3V1Data of
+                             <<$T, $A, $G, _Title:30/binary, _Artist:30/binary, _Album:30/binary, _Year:4/binary, _Comment:28/binary,  0:1/integer, _Track:1/integer, _Genre:8/integer>> ->
+                               {ok, {1, 1}};
+                             _ ->
+                               {ok, {1, 0}}
+                           end
+                      end,
+      file:close(S),
+      Version;
     _Error ->
       error
   end.
