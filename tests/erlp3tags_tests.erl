@@ -29,16 +29,16 @@ test_read_header(FileHandle) ->
 
 test_synch_safe() ->
   Expected = {ok, 85754},
-  Actual = utils:synch_safe(<<0, 5, 29, 122>>),
+  Actual = erlp3_utils:synch_safe(<<0, 5, 29, 122>>),
   Expected = Actual,
   Expected2 = {error, invalid_size_bytes},
-  Actual2 = utils:synch_safe(<<5, 29, 122>>),
+  Actual2 = erlp3_utils:synch_safe(<<5, 29, 122>>),
   Expected2 = Actual2,
   erlog:info("Testing id3_tag_reader:synch_safe/1 - passed~n").
 
 test_text_header_to_atom() ->
   Expected = tal,
-  Actual = utils:header_to_atom("TAL"),
+  Actual = erlp3_utils:header_to_atom("TAL"),
   Expected = Actual,
   erlog:info("Testing utils:text_header_to_atom/1 - passed~n").
 
@@ -46,12 +46,12 @@ test_parse_v23_frame_bin() ->
   <<A, B, C, I, J, K>> = <<1, 0, 1, 0, 1, 0>>,
 
   Flags = {flags, [
-    {tag_alter_preservation, utils:reverse_boolean_code_to_atom(A)},
-    {file_alter_preservation, utils:reverse_boolean_code_to_atom(B)},
-    {read_only, utils:boolean_code_to_atom(C)},
-    {compression, utils:boolean_code_to_atom(I)},
-    {encryption, utils:boolean_code_to_atom(J)},
-    {grouping_identity, utils:boolean_code_to_atom(K)}
+    {tag_alter_preservation, erlp3_utils:reverse_boolean_code_to_atom(A)},
+    {file_alter_preservation, erlp3_utils:reverse_boolean_code_to_atom(B)},
+    {read_only, erlp3_utils:boolean_code_to_atom(C)},
+    {compression, erlp3_utils:boolean_code_to_atom(I)},
+    {encryption, erlp3_utils:boolean_code_to_atom(J)},
+    {grouping_identity, erlp3_utils:boolean_code_to_atom(K)}
   ]},
   ActualAENC = v23_reader:parse_frame_bin(<<"AENC">>, 10, Flags, <<"Akintayo Olusegun", 0, 0, 3, 0, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10>>),
   ExpectedAENC = {aenc, [
@@ -315,8 +315,8 @@ test_parse_v23_frame_bin() ->
     Flags,
     {encoding, 1},
     {language, "ENG"},
-    {timestamp_format, utils:time_format_code_to_atom(2)},
-    {content_type, utils:slt_content_type_code_to_atom(1)},
+    {timestamp_format, erlp3_utils:time_format_code_to_atom(2)},
+    {content_type, erlp3_utils:slt_content_type_code_to_atom(1)},
     {content_descriptor, [83, 116, 114, 97, 110, 103, 0, 1, 0, 101, 114, 115, 0, 1, 1, 32, 105, 110, 0, 2, 0, 32, 116, 104, 101, 0, 2, 1, 32, 110, 105, 103, 104, 116, 0, 2, 2]}
   ]},
   ActualSYLT = ExpectedSYLT,
@@ -530,8 +530,8 @@ test_parse_v22_frame_bin() ->
     {size, 10},
     {encoding, 1},
     {language, "ENG"},
-    {timestamp_format, utils:time_format_code_to_atom(2)},
-    {content_type, utils:slt_content_type_code_to_atom(1)},
+    {timestamp_format, erlp3_utils:time_format_code_to_atom(2)},
+    {content_type, erlp3_utils:slt_content_type_code_to_atom(1)},
     {content_descriptor, [83, 116, 114, 97, 110, 103, 0, 1, 0, 101, 114, 115, 0, 1, 1, 32, 105, 110, 0, 2, 0, 32, 116, 104, 101, 0, 2, 1, 32, 110, 105, 103, 104, 116, 0, 2, 2]}
   ]},
   ActualSLT = ExpectedSLT,

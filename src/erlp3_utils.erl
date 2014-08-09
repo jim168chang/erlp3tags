@@ -6,7 +6,7 @@
 %%% @end
 %%% Created : 19. Jul 2014 1:33 PM
 %%%-------------------------------------------------------------------
--module(utils).
+-module(erlp3_utils).
 -author("aardvocate").
 
 %% API

@@ -91,12 +91,12 @@ read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer
 _UnusedFlags:6, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 2 ->
   {Unsync, Compression} = {A, B},
-  {ok, Size} = utils:synch_safe(<<S1, S2, S3, S4>>),
+  {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
 
   {ok,
     [
       {version, {2, MajV, MinV}},
-      {flags, [{unsync, utils:boolean_code_to_atom(Unsync)}, {compression, utils:boolean_code_to_atom(Compression)}]},
+      {flags, [{unsync, erlp3_utils:boolean_code_to_atom(Unsync)}, {compression, erlp3_utils:boolean_code_to_atom(Compression)}]},
       {size, Size}
     ]
   };
@@ -105,12 +105,12 @@ read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer
 _UnusedFlags:5, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 3 ->
   {Unsync, Extended, Experimental} = {A, B, C},
-  {ok, Size} = utils:synch_safe(<<S1, S2, S3, S4>>),
+  {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
 
   {ok,
     [
       {version, {2, MajV, MinV}},
-      {flags, [{unsync, utils:boolean_code_to_atom(Unsync)}, {extended, utils:boolean_code_to_atom(Extended)}, {experimental, utils:boolean_code_to_atom(Experimental)}]},
+      {flags, [{unsync, erlp3_utils:boolean_code_to_atom(Unsync)}, {extended, erlp3_utils:boolean_code_to_atom(Extended)}, {experimental, erlp3_utils:boolean_code_to_atom(Experimental)}]},
       {size, Size}
     ]
   };
@@ -119,7 +119,7 @@ read_v2_header(<<"ID3", MajV:8/integer, MinV:8/integer, A:1/integer, B:1/integer
 _UnusedFlags:4, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 4 ->
   {Unsync, Extended, Experimental, Footer} = {A, B, C, D},
-  {ok, Size} = utils:synch_safe(<<S1, S2, S3, S4>>),
+  {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
 
   {ok,
     [
@@ -170,11 +170,11 @@ parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Y
   {idv1tag,
     [
       {tag, "ID3v1.1"},
-      {title , utils:decode_string(Title)},
-      {artist , utils:decode_string(Artist)},
-      {album , utils:decode_string(Album)},
+      {title , erlp3_utils:decode_string(Title)},
+      {artist , erlp3_utils:decode_string(Artist)},
+      {album , erlp3_utils:decode_string(Album)},
       {year , Year},
-      {comment , utils:decode_string(Comment)},
+      {comment , erlp3_utils:decode_string(Comment)},
       {track , Track},
       {genre , Genre}
     ]};
@@ -184,11 +184,11 @@ parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Y
   {idv1tag,
     [
       {tag , "ID3v1"},
-      {title , utils:decode_string(Title)},
-      {artist , utils:decode_string(Artist)},
-      {album , utils:decode_string(Album)},
+      {title , erlp3_utils:decode_string(Title)},
+      {artist , erlp3_utils:decode_string(Artist)},
+      {album , erlp3_utils:decode_string(Album)},
       {year , Year},
-      {comment , utils:decode_string(Comment)},
+      {comment , erlp3_utils:decode_string(Comment)},
       {genre , Genre}
     ]};
 

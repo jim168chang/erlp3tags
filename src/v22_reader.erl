@@ -38,10 +38,10 @@ read_v22_frame(_, Frames) ->
   lists:reverse([Frame || Frame <- Frames, Frame =/= not_yet_implemented]).
 
 parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, EmbeddedInfo:8/integer, NextFlagOffset:32/integer>>) ->
-  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, utils:boolean_code_to_atom(EmbeddedInfo)}, {next_flag_offset, NextFlagOffset}]};
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, erlp3_utils:boolean_code_to_atom(EmbeddedInfo)}, {next_flag_offset, NextFlagOffset}]};
 
 parse_frame_bin(<<"BUF">>, Size, <<BufferSize:24/integer, EmbeddedInfo:8/integer>>) ->
-  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, utils:boolean_code_to_atom(EmbeddedInfo)}]};
+  {buf, [{size, Size}, {buffer_size, BufferSize}, {embedded_info, erlp3_utils:boolean_code_to_atom(EmbeddedInfo)}]};
 
 parse_frame_bin(<<"CNT">>, Size, FrameContent) ->
   Bits = Size * 8,
@@ -126,50 +126,50 @@ parse_frame_bin(<<"SLT">>, Size, <<Enc:8/integer, Language:3/binary, TimeStampFo
   {slt, [
     {size, Size},
     {encoding, Enc},
-    {language, utils:decode_string(Language)},
-    {timestamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
-    {content_type, utils:slt_content_type_code_to_atom(ContentType)},
-    {content_descriptor, utils:decode_string(Enc, Rest)}
+    {language, erlp3_utils:decode_string(Language)},
+    {timestamp_format, erlp3_utils:time_format_code_to_atom(TimeStampFormat)},
+    {content_type, erlp3_utils:slt_content_type_code_to_atom(ContentType)},
+    {content_descriptor, erlp3_utils:decode_string(Enc, Rest)}
   ]};
 
 parse_frame_bin(<<"STC">>, Size, <<TimeStampFormat:8/integer, TempoData/binary>>) ->
   {stc, [
     {size, Size},
-    {timestamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
+    {timestamp_format, erlp3_utils:time_format_code_to_atom(TimeStampFormat)},
     {tempo_data, TempoData}
   ]};
 
 parse_frame_bin(<<$T, _T2:1/binary, _T3:1/binary>> = Header, Size, <<Enc:8/integer, Rest/binary>>) ->
-  TextData = case utils:get_null_terminated_string_from_frame(Rest) of
+  TextData = case erlp3_utils:get_null_terminated_string_from_frame(Rest) of
                {Data, _Rem} ->
                  Data;
                _ ->
                  Rest
              end,
-  {utils:header_to_atom(utils:decode_string(Header)), [
+  {erlp3_utils:header_to_atom(erlp3_utils:decode_string(Header)), [
     {size, Size},
     {encoding, Enc},
-    {textstring, utils:decode_string(Enc, TextData)}
+    {textstring, erlp3_utils:decode_string(Enc, TextData)}
   ]};
 
 parse_frame_bin(<<$W, _W2:1/binary, _W3:1/binary>> = Header, Size, <<URL/binary>>) ->
-  {utils:header_to_atom(utils:decode_string(Header)), [
+  {erlp3_utils:header_to_atom(erlp3_utils:decode_string(Header)), [
     {size, Size},
-    {url, utils:decode_string(URL)}
+    {url, erlp3_utils:decode_string(URL)}
   ]};
 
 parse_frame_bin(<<"UFI">>, Size, FrameContent) ->
   {ufi, [{size, Size} | parse_ufi_content(FrameContent)]};
 
 parse_frame_bin(<<"ULT">>, Size, <<Enc:8/integer, Lang:3/binary, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {ContentDesc, Lyrics} ->
       {ult, [
         {size, Size},
         {encoding, Enc},
-        {language, utils:decode_string(Enc, Lang)},
-        {content_descriptor, utils:decode_string(Enc, ContentDesc)},
-        {lyrics_text, utils:decode_string(Enc, Lyrics)}
+        {language, erlp3_utils:decode_string(Enc, Lang)},
+        {content_descriptor, erlp3_utils:decode_string(Enc, ContentDesc)},
+        {lyrics_text, erlp3_utils:decode_string(Enc, Lyrics)}
       ]};
     _ ->
       invalid_bytes_detected
@@ -179,22 +179,22 @@ parse_frame_bin(_Header, _Size, _FrameContent) ->
   not_yet_implemented.
 
 parse_ufi_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame(FrameContent) of
+  case erlp3_utils:get_null_terminated_string_from_frame(FrameContent) of
     {OwnerID, Identitifer} ->
       [
-        {owner_identifier, utils:decode_string(OwnerID)},
+        {owner_identifier, erlp3_utils:decode_string(OwnerID)},
         {identifier, Identitifer}
       ]
   end.
 
 parse_pop_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame(FrameContent) of
+  case erlp3_utils:get_null_terminated_string_from_frame(FrameContent) of
     {Email, Rest} ->
       <<Rating:8/integer, CounterBin/binary>> = Rest,
       Len = length(binary_to_list(CounterBin)) * 8,
       <<Counter:Len/integer>> = CounterBin,
       [
-        {email_to_user, utils:decode_string(Email)},
+        {email_to_user, erlp3_utils:decode_string(Email)},
         {rating, Rating},
         {counter, Counter}
       ];
@@ -203,13 +203,13 @@ parse_pop_content(FrameContent) ->
   end.
 
 parse_pic_content(<<Enc:8/integer, ImageFormat:3/binary, PicType:8/integer, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {Description, PictureData} ->
       [
         {encoding, Enc},
-        {image_format, utils:decode_string(ImageFormat)},
-        {picture_type, utils:pic_type_code_to_atom(PicType)},
-        {description, utils:decode_string(Enc, Description)},
+        {image_format, erlp3_utils:decode_string(ImageFormat)},
+        {picture_type, erlp3_utils:pic_type_code_to_atom(PicType)},
+        {description, erlp3_utils:decode_string(Enc, Description)},
         {picture_data, PictureData}
       ];
     _ ->
@@ -217,12 +217,12 @@ parse_pic_content(<<Enc:8/integer, ImageFormat:3/binary, PicType:8/integer, Rest
   end.
 
 parse_lnk_content(<<LNKEDFrame:3/binary, Rest/binary>>) ->
-  LinkedFrameID = utils:decode_string(LNKEDFrame),
-  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
+  LinkedFrameID = erlp3_utils:decode_string(LNKEDFrame),
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {URL, RestAfterURL} ->
       [
         {frame_identifier, LinkedFrameID},
-        {url, utils:decode_string(URL)},
+        {url, erlp3_utils:decode_string(URL)},
         {additional_id_data, get_additional_id_data(RestAfterURL, [])}
       ];
     _ ->
@@ -230,9 +230,9 @@ parse_lnk_content(<<LNKEDFrame:3/binary, Rest/binary>>) ->
   end.
 
 get_additional_id_data(LinkedContent, Acc) ->
-  case utils:get_null_terminated_string_from_frame(LinkedContent) of
+  case erlp3_utils:get_null_terminated_string_from_frame(LinkedContent) of
     {IDData, Rest} ->
-      Acc2 = [utils:decode_string(IDData) | Acc],
+      Acc2 = [erlp3_utils:decode_string(IDData) | Acc],
       get_additional_id_data(Rest, Acc2);
     _ ->
       lists:reverse(Acc)
@@ -242,11 +242,11 @@ parse_ipl_content(<<Encoding:8/integer, Involvements/binary>>) ->
   [{encoding, Encoding}, {involvements, get_ipls(Encoding, Involvements, [])}].
 
 get_ipls(Encoding, Involvements, Acc) ->
-  case utils:get_null_terminated_string_from_frame(Involvements) of
+  case erlp3_utils:get_null_terminated_string_from_frame(Involvements) of
     {Involvement, RestAfterInvolvement} ->
-      case utils:get_null_terminated_string_from_frame(RestAfterInvolvement) of
+      case erlp3_utils:get_null_terminated_string_from_frame(RestAfterInvolvement) of
         {Involvee, Rest} ->
-          Acc2 = [{involvee, utils:decode_string(Encoding, Involvee)}, {involvement, utils:decode_string(Encoding, Involvement)} | Acc],
+          Acc2 = [{involvee, erlp3_utils:decode_string(Encoding, Involvee)}, {involvement, erlp3_utils:decode_string(Encoding, Involvement)} | Acc],
           get_ipls(Encoding, Rest, Acc2);
         _ ->
           invalid_bytes_detected
@@ -256,17 +256,17 @@ get_ipls(Encoding, Involvements, Acc) ->
   end.
 
 parse_geo_content(<<Encoding:8/integer, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame(Rest) of
+  case erlp3_utils:get_null_terminated_string_from_frame(Rest) of
     {MimeType, RestAfterMimeType} ->
-      case utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterMimeType) of
+      case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterMimeType) of
         {Filename, RestAfterFilename} ->
-          case utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterFilename) of
+          case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(RestAfterFilename) of
             {ContentDesc, EncapsulatedObject} ->
               [
                 {encoding, Encoding},
-                {mime_type, utils:decode_string(0, MimeType)},
-                {filename, utils:decode_string(0, Filename)},
-                {content_description, utils:decode_string(Encoding, ContentDesc)},
+                {mime_type, erlp3_utils:decode_string(0, MimeType)},
+                {filename, erlp3_utils:decode_string(0, Filename)},
+                {content_description, erlp3_utils:decode_string(Encoding, ContentDesc)},
                 {encapsulated_object, EncapsulatedObject}
               ];
             _ ->
@@ -283,26 +283,26 @@ parse_equ_content(<<AdjBits:8/integer, IncOrDec:1, Frequency:15, Rest/binary>>) 
   <<Adjustment:AdjBits/integer>> = Rest,
   [
     {adjustment_bits, AdjBits},
-    {inc_or_dec, utils:equ_inc_dec_code_to_atom(IncOrDec)},
+    {inc_or_dec, erlp3_utils:equ_inc_dec_code_to_atom(IncOrDec)},
     {frequency, Frequency},
     {adjustment, Adjustment}
   ].
 
 parse_etc_content(<<TimeStampFormat:8/integer, EventCode:8/integer, TimeStamp:32/integer>>) ->
   [
-    {time_stamp_format, utils:time_format_code_to_atom(TimeStampFormat)},
-    {event, utils:etc_event_code_to_atom(EventCode)},
+    {time_stamp_format, erlp3_utils:time_format_code_to_atom(TimeStampFormat)},
+    {event, erlp3_utils:etc_event_code_to_atom(EventCode)},
     {timestamp, TimeStamp}
   ].
 
 parse_crm_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
     {OwnerID, Rem} ->
-      case utils:get_null_terminated_string_from_frame_skip_zeros(Rem) of
+      case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(Rem) of
         {ConExp, EncryptedData} ->
           [
-            {owner_id, utils:decode_string(OwnerID)},
-            {content_explanation, utils:decode_string(ConExp)},
+            {owner_id, erlp3_utils:decode_string(OwnerID)},
+            {content_explanation, erlp3_utils:decode_string(ConExp)},
             {encrypted_data, EncryptedData}
           ];
         _ ->
@@ -313,11 +313,11 @@ parse_crm_content(FrameContent) ->
   end.
 
 parse_cra_content(FrameContent) ->
-  case utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(FrameContent) of
     {OwnerID, Rest} ->
       <<PreviewStart:16/integer, PreviewLength:16/integer, EncryptionInfo/binary>> = Rest,
       [
-        {owner_id, utils:decode_string(OwnerID)},
+        {owner_id, erlp3_utils:decode_string(OwnerID)},
         {preview_start, PreviewStart},
         {preview_length, PreviewLength},
         {encryption_info, EncryptionInfo}
@@ -327,12 +327,12 @@ parse_cra_content(FrameContent) ->
   end.
 
 parse_com_content(<<Enc:8/integer, Language:3/binary, Rest/binary>>) ->
-  case utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
+  case erlp3_utils:get_null_terminated_string_from_frame_skip_zeros(Rest) of
     {ShortDesc, Comment} ->
       [
-        {language, utils:decode_string(Enc, Language)},
-        {short_description, utils:decode_string(Enc, ShortDesc)},
-        {comment, utils:decode_string(Enc, Comment)}
+        {language, erlp3_utils:decode_string(Enc, Language)},
+        {short_description, erlp3_utils:decode_string(Enc, ShortDesc)},
+        {comment, erlp3_utils:decode_string(Enc, Comment)}
       ];
     _ ->
       invalid_bytes_detected

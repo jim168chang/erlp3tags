@@ -41,7 +41,7 @@ init([]) ->
 handle_call({set_file, File}, _From, State) ->
   {reply, ok, State#id3V2{file = File}};
 
-handle_call({write, NewTagVal, ?ID3V2_3, TagID}, _From, State) ->
+handle_call({write, NewTagVal, Version, TagID}, _From, State) ->
   Tags = State#id3V2.tags,
   case State#id3V2.file of
     undefined ->
@@ -90,6 +90,14 @@ writeV2(?ID3V2_3 = Version, NewTagVal, TagID) ->
       ok
   end;
 
+writeV2(?ID3V2 = Version, NewTagVal, TagID) ->
+  case gen_server:call(?SERVER, {write, NewTagVal, Version, TagID}) of
+    {error, Reason} ->
+      Reason;
+    _ ->
+      ok
+  end;
+
 writeV2(?ID3V2_4, _NewTagVal, _TagID) ->
   not_yet_implemented.
 
@@ -129,9 +137,9 @@ write_to_file(_, #id3V2{tags = [], file = File} = State, WrittenTags) ->
   {ok, TempFileHandle2} = file:open(TempFile, [append, binary, raw]),
   {_, MajV, MinV} = proplists:get_value(version, V2Header),
   HeaderFlags = proplists:get_value(flags, V2Header),
-  Unsync = utils:boolean_atom_to_code(proplists:get_value(unsync, HeaderFlags)),
-  Extended = utils:boolean_atom_to_code(proplists:get_value(extended, HeaderFlags)),
-  Experimental = utils:boolean_atom_to_code(proplists:get_value(experimental, HeaderFlags)),
+  Unsync = erlp3_utils:boolean_atom_to_code(proplists:get_value(unsync, HeaderFlags)),
+  Extended = erlp3_utils:boolean_atom_to_code(proplists:get_value(extended, HeaderFlags)),
+  Experimental = erlp3_utils:boolean_atom_to_code(proplists:get_value(experimental, HeaderFlags)),
   <<S1:7/integer, S2:7/integer, S3:7/integer, S4:7/integer>> = <<TagsSize:28/integer>>,
   HeaderBin = <<"ID3", MajV:8/integer, MinV:8/integer, Unsync:1/integer, Extended:1/integer, Experimental:1/integer, 0:5/integer, 0:1/integer, S1:7/integer, 0:1/integer, S2:7/integer, 0:1/integer, S3:7/integer, 0:1/integer, S4:7/integer>>,
   file:write(TempFileHandle2, HeaderBin),
@@ -143,12 +151,12 @@ write_to_file(_, #id3V2{tags = [], file = File} = State, WrittenTags) ->
 
 write_frame_header(TempFileHandle, TagValue, TagID) ->
   Flags = proplists:get_value(flags, TagValue),
-  TagAlterPreservation = utils:reverse_boolean_atom_to_code(proplists:get_value(tag_alter_preservation, Flags)),
-  FileAlterPreservation = utils:reverse_boolean_atom_to_code(proplists:get_value(file_alter_preservation, Flags)),
-  ReadOnly = utils:boolean_atom_to_code(proplists:get_value(read_only, Flags)),
-  Compression = utils:boolean_atom_to_code(proplists:get_value(compression, Flags)),
-  Encryption = utils:boolean_atom_to_code(proplists:get_value(encryption, Flags)),
-  GroupingID = utils:boolean_atom_to_code(proplists:get_value(grouping_identity, Flags)),
+  TagAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(tag_alter_preservation, Flags)),
+  FileAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(file_alter_preservation, Flags)),
+  ReadOnly = erlp3_utils:boolean_atom_to_code(proplists:get_value(read_only, Flags)),
+  Compression = erlp3_utils:boolean_atom_to_code(proplists:get_value(compression, Flags)),
+  Encryption = erlp3_utils:boolean_atom_to_code(proplists:get_value(encryption, Flags)),
+  GroupingID = erlp3_utils:boolean_atom_to_code(proplists:get_value(grouping_identity, Flags)),
   FlagsBin = <<TagAlterPreservation:1/integer, FileAlterPreservation:1/integer, ReadOnly:1/integer, 0:5/integer, Compression:1/integer, Encryption:1/integer, GroupingID:1/integer, 0:5/integer>>,
   Size = proplists:get_value(size, TagValue),
 
@@ -167,7 +175,7 @@ write_frame(TempFileHandle, {apic, TagValue}, TagID) ->
   PicData = proplists:get_value(picture_data, TagValue),
   file:write(TempFileHandle, binary:encode_unsigned(Encoding)),
   file:write(TempFileHandle, list_to_binary(MimeType)),
-  file:write(TempFileHandle, utils:pic_type_atom_to_code(PicType)),
+  file:write(TempFileHandle, erlp3_utils:pic_type_atom_to_code(PicType)),
   file:write(TempFileHandle, list_to_binary(Desc)),
   file:write(TempFileHandle, PicData),
   ok;
