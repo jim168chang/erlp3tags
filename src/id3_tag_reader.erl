@@ -124,7 +124,7 @@ _UnusedFlags:4, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   {ok,
     [
       {version, {2, MajV, MinV}},
-      {flags, [{unsync, Unsync}, {extended, Extended}, {experimental, Experimental}, {footer, Footer}]},
+      {flags, [{unsync, erlp3_utils:boolean_code_to_atom(Unsync)}, {extended, erlp3_utils:boolean_code_to_atom(Extended)}, {experimental, erlp3_utils:boolean_code_to_atom(Experimental)}, {footer, erlp3_utils:boolean_code_to_atom(Footer)}]},
       {size, Size}
     ]
   };
@@ -162,9 +162,9 @@ read_v2({2, 3, _}, ID3Data) ->
 
 read_v2({2, 4, _}, _ID3Data) ->
   erlog:info("Found Version 2.4.0~n"),
+  ok.
   %io:format("Header: ~p~n", [Header]),
   %io:format("Content: ~p~n", [file:read(FileHandle, 100)]),
-  ok.
 
 parse_v1_tag(<<$T, $A, $G, Title:30/binary, Artist:30/binary, Album:30/binary, Year:4/binary, Comment:28/binary,  0:1/integer, Track:1/integer, Genre:8/integer>> = _Result) ->
   {idv1tag,

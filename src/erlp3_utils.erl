@@ -26,7 +26,7 @@ from_bool(B) ->
   end.
 
 synch_safe(<<0:1/integer, S1:7/integer, 0:1/integer, S2:7/integer, 0:1/integer, S3:7/integer, 0:1/integer, S4:7/integer>>) ->
-  <<Size:28/integer>> = <<S1:7/integer, S2:7/integer,S3:7/integer, S4:7/integer>>,
+  <<Size:28/integer>> = <<S1:7/integer, S2:7/integer, S3:7/integer, S4:7/integer>>,
   {ok, Size};
 
 synch_safe(_) ->
@@ -173,19 +173,19 @@ reverse_boolean_code_to_atom(Code) ->
 reverse_boolean_atom_to_code(Atom) ->
   case Atom of
     false -> 1;
-    true -> 0
+    _ -> 0
   end.
 
 boolean_code_to_atom(Code) ->
   case Code of
-    0 -> false;
-    _ -> true
+    1 -> true;
+    _ -> false
   end.
 
 boolean_atom_to_code(Atom) ->
   case Atom of
-    false -> 0;
-    true -> 1
+     true -> 1;
+    _ -> 0
   end.
 
 pic_type_code_to_atom(Code) ->

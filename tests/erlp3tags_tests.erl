@@ -667,6 +667,10 @@ tests() ->
   erlog:load_config_file("conf/erlog.conf"),
   erlog:info("~n---------------Starting Tests---------------~n"),
   test_write(),
+  receive
+    after 30000 ->
+      io:format("Waited 30 Secs.")
+  end,
   File = filename:join("misc", "mi_one_six.mp3"),
   Version = id3_tag_reader:get_id3_version(File),
   io:format("Version: ~p~n", [Version]),
@@ -680,5 +684,5 @@ tests() ->
   test_text_header_to_atom(),
   erlog:info("~n---------------Tests Finished---------------~n"),
 
-  erlog:error("Result: ~p~n", [id3_tag_reader:read_tag(filename:join("misc", "sgc.mp3"))]),
+  %%erlog:error("Result: ~p~n", [id3_tag_reader:read_tag(filename:join("misc", "sgc.mp3"))]),
   ok.
