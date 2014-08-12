@@ -56,6 +56,9 @@ decode_string(1, BinString) ->
   unicode:characters_to_list(trim(BinString), unicode);
 
 decode_string(0, BinString) ->
+  unicode:characters_to_list(trim(BinString), latin1);
+
+decode_string(_Any, BinString) ->
   unicode:characters_to_list(trim(BinString), latin1).
 
 get_null_terminated_string_from_frame(FrameContent) ->
