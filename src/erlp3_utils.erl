@@ -122,7 +122,8 @@ etc_event_atom_to_code(Atom) ->
 time_format_code_to_atom(Code) ->
   case Code of
     1 -> mpeg_frames;
-    2 -> milliseconds
+    2 -> milliseconds;
+    _ -> milliseconds
   end.
 
 time_format_atom_to_code(Atom) ->
