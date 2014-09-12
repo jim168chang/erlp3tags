@@ -214,7 +214,8 @@ pic_type_code_to_atom(Code) ->
     ?PIC_TYPE_OTHER -> other;
     ?PIC_TYPE_OTHER_FILE_ICON -> other_file_icon;
     ?PIC_TYPE_PUBLISHER_LOGO_TYPE -> publisher_logo_type;
-    ?PIC_TYPE_RECORDING_LOCATION -> recording_location
+    ?PIC_TYPE_RECORDING_LOCATION -> recording_location;
+    _ -> artist
   end.
 
 pic_type_atom_to_code(Atom) ->
@@ -238,7 +239,8 @@ pic_type_atom_to_code(Atom) ->
     other -> ?PIC_TYPE_OTHER;
     other_file_icon -> ?PIC_TYPE_OTHER_FILE_ICON;
     publisher_logo_type -> ?PIC_TYPE_PUBLISHER_LOGO_TYPE;
-    recording_location -> ?PIC_TYPE_RECORDING_LOCATION
+    recording_location -> ?PIC_TYPE_RECORDING_LOCATION;
+    _ -> ?PIC_TYPE_ARTIST
   end.
 
 recieved_as_code_to_atom(Code) ->

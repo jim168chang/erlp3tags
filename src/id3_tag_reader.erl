@@ -92,7 +92,7 @@ _UnusedFlags:6, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 2 ->
   {Unsync, Compression} = {A, B},
   {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
-
+  erlog:info("Read Size: ~p~n", [Size]),
   {ok,
     [
       {version, {2, MajV, MinV}},
@@ -106,7 +106,7 @@ _UnusedFlags:5, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 3 ->
   {Unsync, Extended, Experimental} = {A, B, C},
   {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
-
+  erlog:info("Read Size: ~p~n", [Size]),
   {ok,
     [
       {version, {2, MajV, MinV}},
@@ -120,7 +120,7 @@ _UnusedFlags:4, S1:8/integer, S2:8/integer, S3:8/integer, S4:8/integer>>)
   when S1 < 128, S2 < 128, S3 < 128, S4 < 128, MajV =:= 4 ->
   {Unsync, Extended, Experimental, Footer} = {A, B, C, D},
   {ok, Size} = erlp3_utils:synch_safe(<<S1, S2, S3, S4>>),
-
+  erlog:info("Read Size: ~p~n", [Size]),
   {ok,
     [
       {version, {2, MajV, MinV}},

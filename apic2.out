@@ -1,0 +1,29 @@
+rebar clean compile
+==> erlog (clean)
+==> erlp3tags (clean)
+==> erlog (compile)
+Compiled src/erlog_sup.erl
+src/file_logger.erl:82: Warning: variable 'Event' is unused
+src/file_logger.erl:82: Warning: variable 'Name' is unused
+Compiled src/file_logger.erl
+Compiled src/log_writer.erl
+Compiled src/erlog_app.erl
+Compiled src/console_logger.erl
+Compiled src/erlog.erl
+Compiled src/config_loader.erl
+==> erlp3tags (compile)
+src/id3_tag_writer.erl:123: Warning: variable 'MP3Data' is unused
+Compiled src/id3_tag_writer.erl
+Compiled src/v23_reader.erl
+Compiled src/erlp3tags_sup.erl
+Compiled src/v22_reader.erl
+Compiled src/erlp3tags_app.erl
+Compiled src/erlp3tags.erl
+Compiled src/id3_tag_reader.erl
+Compiled src/erlp3_utils.erl
+tests/erlp3tags_tests.erl:18: Warning: variable 'Expected' is unused
+tests/erlp3tags_tests.erl:22: Warning: variable 'Actual' is unused
+tests/erlp3tags_tests.erl:45: Warning: function test_parse_v23_frame_bin/0 is unused
+tests/erlp3tags_tests.erl:574: Warning: function test_find_v23_frame/1 is unused
+tests/erlp3tags_tests.erl:584: Warning: function test_write/0 is unused
+{"init terminating in do_boot",{badarg,[{erlang,split_binary,[<<4257059 bytes>>,8708971],[]},{v22_reader,read_v22_frame,2,[{file,"src/v22_reader.erl"},{line,35}]},{id3_tag_reader,parse_v2_tag,1,[{file,"src/id3_tag_reader.erl"},{line,87}]},{id3_tag_reader,read_tag,1,[{file,"src/id3_tag_reader.erl"},{line,25}]},{erlp3tags_tests,tests,0,[{file,"tests/erlp3tags_tests.erl"},{line,669}]},{init,start_it,1,[]},{init,start_em,1,[]}]}}

@@ -59,7 +59,7 @@ handle_call({write, NewTagVal, _Version, TagID}, _From, State) ->
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
-handle_cast({sync, v2},  #id3V2{tags = [#tag{tag_id = _TagID, value = _Value} | _Tags], file = File} = State) ->
+handle_cast({sync, v2}, #id3V2{tags = [#tag{tag_id = _TagID, value = _Value} | _Tags], file = File} = State) ->
   TempFile = File ++ ".tmp",
   file:delete(TempFile),
   State2 = write_to_file(v2, State, []),
@@ -109,20 +109,12 @@ write_to_file(v2, #id3V2{tags = [#tag{tag_id = TagID, value = Value} | Tags], fi
   file:close(TempFileHandle),
   write_to_file(v2, State, [TagID | WrittenTags]);
 
-write_to_file(_, #id3V2{tags = [], file = File} = State, WrittenTags) ->
+write_to_file(_, #id3V2{tags = [], file = File} = State, _WrittenTags) ->
   TempFile = File ++ ".tmp",
   {ok, TempFileHandle} = file:open(TempFile, [append, binary, raw]),
   {ok, AllData} = file:read_file(File),
-  {ok, [{idv1tag, _IDv1TagResult}, {idv2tag, [{header, V2Header}, {extended_header, _extHeader}, {tags, V2Tags}]}]} = id3_tag_reader:read_tag(File),
+  {ok, [{idv1tag, _IDv1TagResult}, {idv2tag, [{header, V2Header}, {extended_header, _extHeader}, {tags, _V2Tags}]}]} = id3_tag_reader:read_tag(File),
   {_, MP3Data} = split_binary(AllData, (10 + proplists:get_value(size, V2Header))),
-
-  case V2Tags of
-    ok ->
-      its_v24;
-    _ ->
-      Keys = proplists:get_keys(V2Tags),
-      write_all_frames(TempFileHandle, Keys, V2Tags, WrittenTags)
-  end,
 
   TagsSize = filelib:file_size(TempFile),
   file:write(TempFileHandle, MP3Data),
@@ -130,12 +122,11 @@ write_to_file(_, #id3V2{tags = [], file = File} = State, WrittenTags) ->
   file:close(TempFileHandle),
   file:delete(TempFile),
   {ok, TempFileHandle2} = file:open(TempFile, [append, binary, raw]),
-  {_, MajV, MinV} = proplists:get_value(version, V2Header),
-  HeaderFlags = proplists:get_value(flags, V2Header),
-  erlog:info("HeaderFlags: ~p~n", [HeaderFlags]),
-  Unsync = erlp3_utils:boolean_atom_to_code(proplists:get_value(unsync, HeaderFlags)),
-  Extended = erlp3_utils:boolean_atom_to_code(proplists:get_value(extended, HeaderFlags)),
-  Experimental = erlp3_utils:boolean_atom_to_code(proplists:get_value(experimental, HeaderFlags)),
+  MajV = 3,
+  MinV = 0,
+  Unsync = 0,
+  Extended = 0,
+  Experimental = 0,
   <<S1:7/integer, S2:7/integer, S3:7/integer, S4:7/integer>> = <<TagsSize:28/integer>>,
   HeaderBin = <<"ID3", MajV:8/integer, MinV:8/integer, Unsync:1/integer, Extended:1/integer, Experimental:1/integer, 0:5/integer, 0:1/integer, S1:7/integer, 0:1/integer, S2:7/integer, 0:1/integer, S3:7/integer, 0:1/integer, S4:7/integer>>,
   file:write(TempFileHandle2, HeaderBin),
@@ -146,20 +137,27 @@ write_to_file(_, #id3V2{tags = [], file = File} = State, WrittenTags) ->
   State.
 
 write_frame_header(TempFileHandle, TagValue, TagID) ->
-  Flags = proplists:get_value(flags, TagValue),
-  TagAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(tag_alter_preservation, Flags)),
-  FileAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(file_alter_preservation, Flags)),
-  ReadOnly = erlp3_utils:boolean_atom_to_code(proplists:get_value(read_only, Flags)),
-  Compression = erlp3_utils:boolean_atom_to_code(proplists:get_value(compression, Flags)),
-  Encryption = erlp3_utils:boolean_atom_to_code(proplists:get_value(encryption, Flags)),
-  GroupingID = erlp3_utils:boolean_atom_to_code(proplists:get_value(grouping_identity, Flags)),
-  FlagsBin = <<TagAlterPreservation:1/integer, FileAlterPreservation:1/integer, ReadOnly:1/integer, 0:5/integer, Compression:1/integer, Encryption:1/integer, GroupingID:1/integer, 0:5/integer>>,
-  Size = proplists:get_value(size, TagValue),
+  FlagsBin = case proplists:get_value(flags, TagValue) of
+               undefined ->
+                 undefined;
+               Flags ->
+                 TagAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(tag_alter_preservation, Flags)),
+                 FileAlterPreservation = erlp3_utils:reverse_boolean_atom_to_code(proplists:get_value(file_alter_preservation, Flags)),
+                 ReadOnly = erlp3_utils:boolean_atom_to_code(proplists:get_value(read_only, Flags)),
+                 Compression = erlp3_utils:boolean_atom_to_code(proplists:get_value(compression, Flags)),
+                 Encryption = erlp3_utils:boolean_atom_to_code(proplists:get_value(encryption, Flags)),
+                 GroupingID = erlp3_utils:boolean_atom_to_code(proplists:get_value(grouping_identity, Flags)),
+                 <<TagAlterPreservation:1/integer, FileAlterPreservation:1/integer, ReadOnly:1/integer, 0:5/integer, Compression:1/integer, Encryption:1/integer, GroupingID:1/integer, 0:5/integer>>
+             end,
 
+  Size = proplists:get_value(size, TagValue),
   file:write(TempFileHandle, list_to_binary(TagID)),
   <<A:8/integer, B:8/integer, C:8/integer, D:8/integer>> = <<Size:32/integer>>,
   file:write(TempFileHandle, <<A:8/integer, B:8/integer, C:8/integer, D:8/integer>>),
-  file:write(TempFileHandle, FlagsBin).
+  case FlagsBin of
+    undefined -> ok;
+    _ -> file:write(TempFileHandle, FlagsBin)
+  end.
 
 write_frame(TempFileHandle, {apic, TagValue}, TagID) ->
   erlog:info("Writing Frame: ~p~n", [TagID]),
@@ -177,7 +175,7 @@ write_frame(TempFileHandle, {apic, TagValue}, TagID) ->
   erlog:info("Writing Frame: ~p Successful~n", [TagID]),
   ok;
 
-write_frame(TempFileHandle, {_TagIDLowerCase, TagValue}, [H | _Rest] = TagID) when H =:= 84 ->
+write_frame(TempFileHandle, {_TagIDLowerCase, TagValue}, [H | _Rest] = TagID) when H =:= 84, length(TagID) =:= 4 ->
   erlog:info("Writing Frame: ~p~n", [TagID]),
   write_frame_header(TempFileHandle, TagValue, TagID),
   Encoding = proplists:get_value(encoding, TagValue),
@@ -202,37 +200,26 @@ write_frame(TempFileHandle, {uslt, TagValue}, TagID) ->
 write_frame(TempFileHandle, {comm, TagValue}, TagID) ->
   erlog:info("Writing Frame: ~p~n", [TagID]),
   write_frame_header(TempFileHandle, TagValue, TagID),
-  Encoding = proplists:get_value(encoding, TagValue),
   Language = proplists:get_value(language, TagValue),
   ContentDesc = proplists:get_value(short_description, TagValue),
   Comment = proplists:get_value(comment, TagValue),
-  file:write(TempFileHandle, binary:encode_unsigned(Encoding)),
+  case proplists:get_value(encoding, TagValue) of
+    undefined -> ok;
+    Encoding -> file:write(TempFileHandle, binary:encode_unsigned(Encoding))
+  end,
   file:write(TempFileHandle, list_to_binary(Language)),
   file:write(TempFileHandle, list_to_binary(ContentDesc)),
   file:write(TempFileHandle, list_to_binary(Comment)),
   ok;
 
-write_frame(TempFileHandle, {pic, TagValue}, TagID) ->
-  write_frame(TempFileHandle, {apic, TagValue}, TagID);
+write_frame(TempFileHandle, {pic, TagValue}, _TagID) ->
+  write_frame(TempFileHandle, {apic, TagValue}, "APIC");
 
-write_frame(TempFileHandle, {ult, TagValue}, TagID) ->
-  write_frame(TempFileHandle, {uslt, TagValue}, TagID);
+write_frame(TempFileHandle, {ult, TagValue}, _TagID) ->
+  write_frame(TempFileHandle, {uslt, TagValue}, "USLT");
 
-write_frame(TempFileHandle, {com, TagValue}, TagID) ->
-  write_frame(TempFileHandle, {comm, TagValue}, TagID);
+write_frame(TempFileHandle, {com, TagValue}, _TagID) ->
+  write_frame(TempFileHandle, {comm, TagValue}, "COMM");
 
 write_frame(_TempFileHandle, _TagValue, _TagID) ->
-  ok.
-
-write_all_frames(TempFileHandle, [Key | Keys], V2Tags, WrittenTags) ->
-  UpperCaseKey = string:to_upper(atom_to_list(Key)),
-  case lists:member(UpperCaseKey, WrittenTags) of
-    true ->
-      write_all_frames(TempFileHandle, Keys, V2Tags, WrittenTags);
-    _ ->
-      write_frame(TempFileHandle, proplists:get_value(Key, V2Tags), string:to_upper(atom_to_list(Key))),
-      write_all_frames(TempFileHandle, Keys, V2Tags, WrittenTags)
-  end;
-
-write_all_frames(_TempFileHandle, [], _V2Tags, _WrittenTags) ->
   ok.

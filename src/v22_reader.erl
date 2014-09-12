@@ -30,6 +30,8 @@ read_v22(ID3Data) ->
   Result.
 
 read_v22_frame(<<FrameID:3/binary, Size:24/integer, Rest/binary>>, Frames) when FrameID =/= <<0, 0, 0>> ->
+  erlog:info("Read Frame ID: ~p~n", [FrameID]),
+  erlog:info("Size Of Frame: ~p~n", [Size]),
   {FrameContent, ID3Data} = split_binary(Rest, Size),
   Frame = parse_frame_bin(FrameID, Size, FrameContent),
   read_v22_frame(ID3Data, [Frame | Frames]);
